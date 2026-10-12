@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile — CampusMart</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/brand.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#14213d" />
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f9fafb; padding-bottom: 100px; }
+
+    .profile-card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      border: 1px solid #e5e7eb;
+      padding: 32px 24px;
+      text-align: center;
+      margin-top: 16px;
+      margin-bottom: 20px;
+    }
+
+    .avatar-circle {
+      width: 96px; height: 96px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #14213d, #ff7f1e);
+      color: white;
+      font-size: 2.2rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      position: relative;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(255,127,30,0.25);
+    }
+
+    .avatar-circle img {
+      width: 100%; height: 100%;
+      border-radius: 50%; object-fit: cover;
+    }
+
+    .avatar-edit {
+      position: absolute; bottom: 0; right: 0;
+      width: 28px; height: 28px;
+      background: #ff7f1e; color: white;
+      border-radius: 50%; border: 2px solid white;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 0.8rem;
+    }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 14px; border-radius: 999px;
+      font-size: 0.8rem; font-weight: 600;
+    }
+    .status-badge.pending  { background: #fef3c7; color: #92400e; }
+    .status-badge.verified { background: #d1fae5; color: #065f46; }
+    .status-badge.rejected { background: #fee2e2; color: #991b1b; }
+
+    .verify-btn {
+      background: #059669; color: white;
+      border: none; border-radius: 10px;
+      padding: 10px 20px; font-weight: 600; font-size: 0.9rem;
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+      margin: 12px auto 0; transition: background 0.2s;
+    }
+    .verify-btn:hover { background: #047857; }
+    .verify-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .stats-row {
+      display: flex; justify-content: space-around;
+      background: #f3f4f6; border-radius: 14px; padding: 16px;
+      margin-bottom: 20px; border: 1px solid #e5e7eb;
+    }
+    .stat-item h4 { font-size: 1.4rem; font-weight: 700; color: #14213d; margin: 0; }
+    .stat-item span { font-size: 0.72rem; color: #6b7280; }
+
+    .tabs {
+      display: flex; border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 20px; gap: 4px;
+    }
+    .tab-btn {
+      flex: 1; padding: 12px 8px; background: none; border: none;
+      border-bottom: 3px solid transparent; font-size: 0.82rem;
+      font-weight: 600; color: #6b7280; cursor: pointer; transition: all 0.2s;
+    }
+    .tab-btn.active { color: #059669; border-bottom-color: #059669; }
+
+    .empty-box {
+      text-align: center; padding: 48px 24px;
+      color: #9ca3af; font-size: 0.9rem;
+    }
+    .empty-box .em-icon { font-size: 3rem; display: block; margin-bottom: 12px; }
+
+    /* Debug Panel */
+    #debug-panel {
+      background: #1e293b; color: #94a3b8;
+      font-family: monospace; font-size: 0.75rem;
+      border-radius: 10px; padding: 16px;
+      margin-top: 16px; display: none;
+      max-height: 260px; overflow-y: auto;
+    }
+    #debug-panel .ok  { color: #34d399; }
+    #debug-panel .err { color: #f87171; }
+    #debug-panel .inf { color: #60a5fa; }
+  </style>
+</head>
+<body>
+
+  <!-- ── TOP NAVBAR ── -->
+  <header class="cm-topbar">
+    <a href="/index.html" class="cm-topbar__brand">
+      <div class="cm-topbar__brand-icon">🛒</div>
+      <div>Campus<span>Mart</span></div>
+    </a>
+    <div class="cm-topbar__actions">
+      <a href="/index.html" class="cm-topbar__icon-btn" title="Home">
+        <i class="bi bi-house"></i>
+      </a>
+      <button class="cm-topbar__icon-btn" id="btn-logout" title="Log Out">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </header>
+
+  <main style="padding: 0 16px; max-width: 680px; margin: 0 auto;">
+
+    <!-- ── LOADING NOTICE ── -->
+    <div id="loading-card" class="profile-card" style="padding: 48px 24px;">
+      <div style="width:44px;height:44px;border:4px solid #e5e7eb;border-top-color:#059669;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px;"></div>
+      <p style="color:#6b7280;margin:0;">Loading your profile...</p>
+    </div>
+
+    <!-- ── PROFILE CARD ── -->
+    <div id="profile-card" class="profile-card" style="display:none;">
+
+      <!-- Avatar -->
+      <div class="avatar-circle" id="avatar-wrap">
+        <span id="avatar-initials">CM</span>
+        <label class="avatar-edit" for="avatar-input" title="Upload Photo">
+          <i class="bi bi-camera-fill"></i>
+        </label>
+      </div>
+      <input type="file" id="avatar-input" accept="image/*" style="display:none;" />
+
+      <!-- Name & Details -->
+      <h1 id="p-name" style="font-size:1.4rem;font-weight:700;margin-bottom:4px;color:#111827;">-</h1>
+      <p style="color:#6b7280;font-size:0.85rem;margin-bottom:4px;">
+        🎓 University of Azad Jammu & Kashmir
+      </p>
+      <p id="p-dept-sem" style="font-weight:600;font-size:0.9rem;color:#374151;margin-bottom:16px;">-</p>
+
+      <!-- Verification Status -->
+      <div id="p-status-wrap" style="margin-bottom:12px;"></div>
+
+      <!-- Bio -->
+      <p id="p-bio" style="font-size:0.88rem;color:#6b7280;margin:12px 0 0;display:none;"></p>
+
+      <!-- WhatsApp -->
+      <a id="p-whatsapp" href="#" target="_blank" style="display:none;margin-top:12px;background:#25d366 !important;border-color:#25d366 !important;" class="btn btn-sm btn-success">
+        <i class="bi bi-whatsapp"></i> WhatsApp Me
+      </a>
+
+      <!-- Edit Button -->
+      <button class="btn btn-outline-primary btn-sm mt-3" data-bs-toggle="modal" data-bs-target="#editModal">
+        <i class="bi bi-pencil-square"></i> Edit Profile
+      </button>
+    </div>
+
+    <!-- ── ERROR CARD ── -->
+    <div id="error-card" class="profile-card" style="display:none;">
+      <div style="font-size:3rem;margin-bottom:12px;">⚠️</div>
+      <h2 style="font-size:1.1rem;font-weight:700;color:#111827;">Profile Load Failed</h2>
+      <p id="error-msg" style="color:#6b7280;font-size:0.85rem;"></p>
+      <button class="btn btn-primary btn-sm mt-2" onclick="location.reload()">
+        <i class="bi bi-arrow-clockwise"></i> Try Again
+      </button>
+      <br>
+      <button class="btn btn-link btn-sm mt-2" onclick="toggleDebug()">
+        🐛 View Debug Info
+      </button>
+    </div>
+
+    <!-- ── STATS ROW ── -->
+    <div class="stats-row" id="stats-row" style="display:none;">
+      <div class="stat-item text-center">
+        <h4 id="s-trust">85</h4>
+        <span>Trust Score 🛡️</span>
+      </div>
+      <div class="stat-item text-center">
+        <h4 id="s-active">0</h4>
+        <span>Active Items 📦</span>
+      </div>
+      <div class="stat-item text-center">
+        <h4 id="s-deals">0</h4>
+        <span>Deals Done ✅</span>
+      </div>
+      <div class="stat-item text-center">
+        <h4 id="s-rating">5.0⭐</h4>
+        <span>Rating</span>
+      </div>
+    </div>
+
+    <!-- ── ACTIVITY TABS ── -->
+    <div class="tabs" id="tabs-row" style="display:none;">
+      <button class="tab-btn active" onclick="showTab('listings')">
+        📦 My Items (<span id="cnt-listings">0</span>)
+      </button>
+      <button class="tab-btn" onclick="showTab('sold')">
+        ✅ Sold (<span id="cnt-sold">0</span>)
+      </button>
+      <button class="tab-btn" onclick="showTab('wishlist')">
+        ❤️ Wishlist (<span id="cnt-wishlist">0</span>)
+      </button>
+    </div>
+
+    <div id="tab-listings">
+      <div id="listings-grid" class="row row-cols-2 row-cols-md-3 g-3"></div>
+      <div id="listings-empty" class="empty-box" style="display:none;">
+        <span class="em-icon">📦</span>
+        <strong>No active listings yet</strong><br/>
+        <a href="/post-listing.html" class="btn btn-success btn-sm mt-3">
+          <i class="bi bi-plus-lg"></i> Post Your First Item
+        </a>
+      </div>
+    </div>
+
+    <div id="tab-sold" style="display:none;">
+      <div id="sold-grid" class="row row-cols-2 row-cols-md-3 g-3"></div>
+      <div id="sold-empty" class="empty-box"><span class="em-icon">🤝</span>No sold items yet</div>
+    </div>
+
+    <div id="tab-wishlist" style="display:none;">
+      <div id="wishlist-grid" class="row row-cols-2 row-cols-md-3 g-3"></div>
+      <div id="wishlist-empty" class="empty-box"><span class="em-icon">❤️</span>No saved items yet</div>
+    </div>
+
+    <!-- ── DEBUG PANEL ── -->
+    <div id="debug-panel">
+      <strong style="color:#f1f5f9;">🐛 CampusMart Debug Log</strong><br/>
+    </div>
+
+  </main>
+
+  <!-- ── BOTTOM NAVIGATION ── -->
+  <nav class="cm-bottom-nav">
+    <a href="/index.html" class="cm-bottom-nav__item">
+      <i class="bi bi-house-door-fill"></i><span>Home</span>
+    </a>
+    <a href="/index.html#cm-feed" class="cm-bottom-nav__item">
+      <i class="bi bi-search"></i><span>Search</span>
+    </a>
+    <a href="/post-listing.html" class="cm-bottom-nav__post">
+      <div class="cm-bottom-nav__post-btn"><i class="bi bi-plus-lg"></i></div>
+      <span>Sell</span>
+    </a>
+    <a href="/chat.html" class="cm-bottom-nav__item">
+      <i class="bi bi-chat-dots-fill"></i><span>Chat</span>
+    </a>
+    <a href="/profile.html" class="cm-bottom-nav__item active">
+      <i class="bi bi-person-fill"></i><span>Profile</span>
+    </a>
+  </nav>
+
+  <!-- ── EDIT PROFILE MODAL ── -->
+  <div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:20px;">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold">Edit Profile</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="edit-form">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Full Name</label>
+              <input type="text" class="form-control" id="e-name" required />
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-8">
+                <label class="form-label fw-semibold">Department</label>
+                <select class="form-select" id="e-dept" required></select>
+              </div>
+              <div class="col-4">
+                <label class="form-label fw-semibold">Semester</label>
+                <select class="form-select" id="e-sem" required></select>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">WhatsApp Number <small class="text-muted">(optional)</small></label>
+              <input type="tel" class="form-control" id="e-phone" placeholder="03001234567" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Short Bio <small class="text-muted">(optional)</small></label>
+              <textarea class="form-control" id="e-bio" rows="2" placeholder="e.g. BSCS final semester student..."></textarea>
+            </div>
+            <div class="d-flex gap-2 justify-content-end">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="save-btn">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script type="module">
+    import { auth, db, COLLECTIONS, APP_CONSTANTS } from "/js/firebase.js";
+    import { onAuthStateChanged, signOut }           from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      doc, getDoc, setDoc, updateDoc,
+      collection, query, where, getDocs,
+      arrayUnion, arrayRemove, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { compressAvatar, compressImage } from "/js/auth.js";
+    import { getTrustStats } from "/js/ratings.js";
+
+    // ── Debug helper ─────────────────────────────────────────
+    const dbg = document.getElementById("debug-panel");
+    function log(msg, type = "inf") {
+      console.log(msg);
+      const line = document.createElement("div");
+      line.className = type;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      dbg.appendChild(line);
+    }
+    window.toggleDebug = () => {
+      dbg.style.display = dbg.style.display === "none" ? "block" : "none";
+    };
+
+    // ── UI helpers ───────────────────────────────────────────
+    function showCard(id) {
+      ["loading-card","profile-card","error-card"].forEach(c => {
+        document.getElementById(c).style.display = c === id ? "block" : "none";
+      });
+    }
+
+    function showError(msg) {
+      showCard("error-card");
+      document.getElementById("error-msg").textContent = msg;
+      log("ERROR: " + msg, "err");
+    }
+
+    function showToast(msg, type = "info") {
+      const colors = { success:"#059669", error:"#dc2626", info:"#3b82f6", warning:"#d97706" };
+      const t = document.createElement("div");
+      t.style.cssText = `position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+        background:${colors[type]||"#3b82f6"};color:white;padding:10px 20px;
+        border-radius:10px;font-size:0.85rem;font-weight:600;z-index:9999;
+        box-shadow:0 4px 12px rgba(0,0,0,0.2);`;
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3500);
+    }
+
+    function esc(t) {
+      return String(t ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+    }
+    function getInitials(name) {
+      return (name||"CM").split(" ").slice(0,2).map(w=>w[0]?.toUpperCase()||"").join("");
+    }
+    function formatPrice(price, isFree, isBarter) {
+      if (isFree)   return "FREE 🎁";
+      if (isBarter) return "Barter 🔄";
+      return `Rs. ${Number(price||0).toLocaleString("en-PK")}`;
+    }
+
+    // ── Fill dropdowns ────────────────────────────────────────
+    const eDept = document.getElementById("e-dept");
+    const eSem  = document.getElementById("e-sem");
+    APP_CONSTANTS.DEPARTMENTS.forEach(d => {
+      eDept.innerHTML += `<option value="${d}">${d}</option>`;
+    });
+    APP_CONSTANTS.SEMESTERS.forEach(s => {
+      eSem.innerHTML += `<option value="${s}">Semester ${s}</option>`;
+    });
+
+    // ── State ──────────────────────────────────────────────────
+    let me = null;
+    let profile = null;
+
+    // ── 1. AUTH GATE ──────────────────────────────────────────
+    log("Waiting for Firebase auth...", "inf");
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        log("Not logged in — redirecting to login", "err");
+        window.location.replace("/login.html");
+        return;
+      }
+      me = user;
+      log(`Auth OK — uid: ${user.uid}`, "ok");
+      log(`Email: ${user.email}`, "ok");
+      await loadProfile();
+    });
+
+    // ── 2. LOAD PROFILE FROM FIRESTORE ────────────────────────
+    async function loadProfile() {
+      log("Fetching Firestore profile...", "inf");
+      try {
+        const userRef = doc(db, COLLECTIONS.USERS, me.uid);
+        const snap    = await getDoc(userRef);
+
+        if (snap.exists()) {
+          profile = { uid: me.uid, ...snap.data() };
+          log(`Profile found: name="${profile.name}", dept="${profile.department}", status="${profile.verificationStatus}"`, "ok");
+        } else {
+          // Auto-create a default profile if missing
+          log("No Firestore doc found — creating default profile", "inf");
+          const defaultProfile = {
+            name:               me.displayName || me.email.split("@")[0] || "Student",
+            email:              me.email,
+            department:         "",
+            semester:           1,
+            role:               "student",
+            verificationStatus: "pending",
+            createdAt:          serverTimestamp()
+          };
+          await setDoc(userRef, defaultProfile);
+          profile = { uid: me.uid, ...defaultProfile };
+          log("Default profile created in Firestore", "ok");
+          showToast("Profile created! Please fill in your details.", "info");
+        }
+
+        // Trust Score is computed here from real ratings + completed deals (never stored, so it cannot be faked)
+        profile._stats = await getTrustStats(me.uid, profile.verificationStatus === "verified");
+        log(`Trust Score computed: ${profile._stats.trust} (${profile._stats.count} ratings, ${profile._stats.deals} deals)`, "ok");
+
+        renderProfile();
+        await loadItems();
+
+      } catch (err) {
+        log(`Firestore error: ${err.code} — ${err.message}`, "err");
+        showError(`Could not load profile: ${err.message}. Make sure Firestore rules allow reads.`);
+        dbg.style.display = "block";
+      }
+    }
+
+    // ── 3. RENDER PROFILE ─────────────────────────────────────
+    function renderProfile() {
+      showCard("profile-card");
+
+      // Name
+      document.getElementById("p-name").textContent = profile.name || "Student";
+
+      // Department & Semester
+      const dept = profile.department || "";
+      const sem  = profile.semester   || "";
+      const deptSemText = dept && sem
+        ? `${dept} • Semester ${sem}`
+        : dept
+          ? dept
+          : "Tap 'Edit Profile' to add your details 👇";
+      document.getElementById("p-dept-sem").textContent = deptSemText;
+
+      // Avatar
+      const wrap = document.getElementById("avatar-wrap");
+      if (profile.avatar) {
+        wrap.innerHTML = `
+          <img src="${profile.avatar}" alt="Avatar" />
+          <label class="avatar-edit" for="avatar-input" title="Change Photo">
+            <i class="bi bi-camera-fill"></i>
+          </label>
+        `;
+      } else {
+        document.getElementById("avatar-initials").textContent = getInitials(profile.name);
+      }
+
+      // Verification Status Badge
+      const statusWrap = document.getElementById("p-status-wrap");
+      if (profile.verificationStatus === "verified") {
+        statusWrap.innerHTML = `<span class="status-badge verified"><i class="bi bi-patch-check-fill"></i> Verified Student ✅</span>`;
+      } else if (profile.verificationStatus === "blocked") {
+        statusWrap.innerHTML = `<span class="status-badge rejected"><i class="bi bi-slash-circle-fill"></i> Account Blocked 🚫</span>`;
+      } else if (profile.verificationStatus === "rejected") {
+        statusWrap.innerHTML = `<span class="status-badge rejected"><i class="bi bi-x-circle-fill"></i> Verification Rejected ❌</span>`;
+      } else {
+        statusWrap.innerHTML = `<span class="status-badge pending"><i class="bi bi-clock-history"></i> Verification Pending ⏳</span>`;
+      }
+
+      // Stats
+      document.getElementById("stats-row").style.display = "flex";
+      const st = profile._stats || { trust: 0, deals: 0, count: 0, avg: 0 };
+      document.getElementById("s-trust").textContent  = st.trust;
+      document.getElementById("s-deals").textContent  = st.deals;
+      document.getElementById("s-rating").textContent = st.count ? `${Number(st.avg).toFixed(1)}⭐ (${st.count})` : "New";
+
+      // Tabs
+      document.getElementById("tabs-row").style.display = "flex";
+
+      // Bio
+      if (profile.bio) {
+        document.getElementById("p-bio").textContent = profile.bio;
+        document.getElementById("p-bio").style.display = "block";
+      }
+
+      // WhatsApp
+      if (profile.phone) {
+        const wa = document.getElementById("p-whatsapp");
+        wa.href = `https://wa.me/${profile.phone.replace(/\D/g,"")}`;
+        wa.style.display = "inline-flex";
+      }
+
+      // Pre-fill edit form
+      document.getElementById("e-name").value  = profile.name  || "";
+      document.getElementById("e-dept").value  = profile.department || "";
+      document.getElementById("e-sem").value   = profile.semester   || 1;
+      document.getElementById("e-phone").value = profile.phone || "";
+      document.getElementById("e-bio").value   = profile.bio   || "";
+
+      log("Profile rendered successfully", "ok");
+    }
+
+    // ── 5. AVATAR UPLOAD ──────────────────────────────────────
+    document.getElementById("avatar-input").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      showToast("Compressing & uploading photo...", "info");
+      log("Uploading avatar...", "inf");
+      try {
+        const base64 = await compressAvatar(file);
+        await updateDoc(doc(db, COLLECTIONS.USERS, me.uid), { avatar: base64 });
+        profile.avatar = base64;
+        renderProfile();
+        showToast("Profile picture updated! 📸", "success");
+        log("Avatar updated", "ok");
+      } catch (err) {
+        log(`Avatar error: ${err.message}`, "err");
+        showToast("Could not update photo", "error");
+      }
+    });
+
+    // ── 6. SAVE EDIT FORM ─────────────────────────────────────
+    document.getElementById("edit-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("save-btn");
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+
+      const updates = {
+        name:       document.getElementById("e-name").value.trim(),
+        department: document.getElementById("e-dept").value,
+        semester:   Number(document.getElementById("e-sem").value),
+        phone:      document.getElementById("e-phone").value.trim(),
+        bio:        document.getElementById("e-bio").value.trim(),
+        updatedAt:  serverTimestamp()
+      };
+
+      log(`Saving profile: name="${updates.name}", dept="${updates.department}"`, "inf");
+
+      try {
+        await updateDoc(doc(db, COLLECTIONS.USERS, me.uid), updates);
+        profile = { ...profile, ...updates };
+        renderProfile();
+        bootstrap.Modal.getInstance(document.getElementById("editModal")).hide();
+        showToast("Profile updated! ✅", "success");
+        log("Profile saved", "ok");
+      } catch (err) {
+        log(`Save error: ${err.message}`, "err");
+        showToast("Save failed: " + err.message, "error");
+        dbg.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Save Changes";
+      }
+    });
+
+    // ── 7. TAB SWITCHING ──────────────────────────────────────
+    window.showTab = (tab) => {
+      ["listings","sold","wishlist"].forEach(t => {
+        document.getElementById(`tab-${t}`).style.display = t === tab ? "block" : "none";
+      });
+      document.querySelectorAll(".tab-btn").forEach((b, i) => {
+        b.classList.toggle("active", ["listings","sold","wishlist"][i] === tab);
+      });
+    };
+
+    // ── 8. LOAD USER ITEMS ────────────────────────────────────
+    async function loadItems() {
+      log("Loading user listings...", "inf");
+      try {
+        const snap = await getDocs(query(collection(db, COLLECTIONS.LISTINGS), where("sellerId", "==", me.uid)));
+        const all = [];
+        snap.forEach(d => all.push({ id: d.id, ...d.data() }));
+
+        const active = all.filter(i => i.status === "available" || i.status === "reserved");
+        const sold   = all.filter(i => i.status === "sold");
+        log(`Listings: ${active.length} active, ${sold.length} sold`, "ok");
+
+        document.getElementById("s-active").textContent     = active.length;
+        document.getElementById("cnt-listings").textContent = active.length;
+        document.getElementById("cnt-sold").textContent     = sold.length;
+        renderItems("listings-grid", "listings-empty", active);
+        renderItems("sold-grid", "sold-empty", sold);
+      } catch (err) {
+        log(`Listings error: ${err.message}`, "err");
+      }
+
+      // Wishlist: saved with the heart button in users/{uid}/wishlist
+      try {
+        const ws = await getDocs(collection(db, COLLECTIONS.USERS, me.uid, "wishlist"));
+        const items = (await Promise.all(ws.docs.slice(0, 30).map(async d => {
+          const s = await getDoc(doc(db, COLLECTIONS.LISTINGS, d.id));
+          return s.exists() ? { id: s.id, ...s.data() } : null;
+        }))).filter(Boolean);
+        document.getElementById("cnt-wishlist").textContent = items.length;
+        renderItems("wishlist-grid", "wishlist-empty", items);
+        log(`Wishlist: ${items.length} items`, "ok");
+      } catch (err) {
+        log(`Wishlist error: ${err.message}`, "err");
+      }
+    }
+
+    function renderItems(gridId, emptyId, items) {
+      const grid = document.getElementById(gridId);
+      if (!grid) return;
+      grid.innerHTML = "";
+
+      if (items.length === 0) {
+        if (emptyId) document.getElementById(emptyId).style.display = "block";
+        return;
+      }
+      if (emptyId) document.getElementById(emptyId).style.display = "none";
+
+      items.forEach(item => {
+        const photo = item.photos?.[0] || null;
+        const col = document.createElement("div");
+        col.className = "col";
+        col.innerHTML = `
+          <a href="/listing.html?id=${encodeURIComponent(item.id)}"
+             style="display:block;background:white;border-radius:14px;
+             box-shadow:0 1px 8px rgba(0,0,0,0.07);border:1px solid #e5e7eb;
+             overflow:hidden;text-decoration:none;color:inherit;">
+            ${photo
+              ? `<img src="${photo}" style="width:100%;height:120px;object-fit:cover;" alt="${esc(item.title)}"/>`
+              : `<div style="width:100%;height:120px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:2rem;">📦</div>`
+            }
+            <div style="padding:10px;">
+              <div style="font-weight:700;font-size:0.88rem;color:#d96a0d;">${formatPrice(item.price, item.isGiveaway, item.isBarter)}</div>
+              <div style="font-size:0.8rem;font-weight:600;color:#111827;margin:4px 0;
+                overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(item.title)}</div>
+              <span style="font-size:0.72rem;background:#f3f4f6;padding:2px 8px;border-radius:999px;color:#6b7280;">
+                ${esc(item.condition || "Used")}
+              </span>
+            </div>
+          </a>`;
+        grid.appendChild(col);
+      });
+    }
+
+    // ── 9. LOGOUT ─────────────────────────────────────────────
+    document.getElementById("btn-logout").addEventListener("click", async () => {
+      await signOut(auth);
+      window.location.replace("/login.html");
+    });
+  </script>
+  <script type="module" src="/js/chat-badge.js"></script>
+</body>
+</html>

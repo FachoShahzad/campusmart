@@ -1,0 +1,10 @@
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+node_modules/
+Thumbs.db
+desktop.ini
+.vscode/
+*.pem
+*service-account*.json
+.env

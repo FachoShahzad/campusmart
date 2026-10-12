@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Listing — CampusMart</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/brand.css" />
+<meta name="theme-color" content="#14213d" />
+<style>
+  #main-photo{width:100%;max-height:420px;object-fit:contain;background:#f1f3f5;border-radius:12px}
+  .t{width:72px;height:72px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid transparent}
+  .t.active{border-color:#059669}
+</style>
+</head>
+<body>
+<header class="cm-topbar">
+  <a href="/index.html" class="cm-topbar__brand"><div class="cm-topbar__brand-icon">🛒</div><div>Campus<span>Mart</span></div></a>
+</header>
+
+<main class="container pb-4" style="padding-top:100px;max-width:820px">
+  <div id="loading" class="text-center text-muted py-5">Loading...</div>
+  <div id="not-found" class="alert alert-warning d-none">This listing was not found. It may have been deleted. <a href="/index.html">Back to home</a></div>
+  <div id="content" class="d-none"></div>
+  <div id="sold-dlg" style="display:none;position:fixed;inset:0;background:#0007;z-index:2000;align-items:center;justify-content:center;padding:16px">
+    <div class="bg-white rounded p-3" style="max-width:420px;width:100%">
+      <div class="fw-semibold mb-1">Who bought this item?</div>
+      <div class="small text-muted mb-2">Only this buyer will be able to rate you. This cannot be undone.</div>
+      <div id="buyer-list" class="mb-3"></div>
+      <div class="d-flex gap-2"><button id="sold-cancel" class="btn btn-outline-secondary flex-fill">Cancel</button><button id="sold-ok" class="cm-btn cm-btn--accent flex-fill">Mark as sold</button></div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+  import { auth } from "/js/firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import "/js/app.js";
+  import { showToast } from "/js/app.js";
+  import { getListing, setListingStatus, deleteListing, priceLabel, esc } from "/js/listings.js";
+  import { getWishlistIds, toggleWishlist } from "/js/wishlist.js";
+  import { openReportDialog } from "/js/report-ui.js";
+  import { getSellerRatings, getBuyersForListing, markSold, getMyRating, submitRating } from "/js/ratings.js";
+
+  const id = new URLSearchParams(location.search).get("id");
+  const $ = x => document.getElementById(x);
+  const STATUS_CLASS = { available: "bg-success", reserved: "bg-warning text-dark", sold: "bg-secondary" };
+  let listing, uid = null, wished = false, myRating = null, sellerRatings = [], pick = 0;
+
+  async function load() {
+    listing = id ? await getListing(id) : null;
+    $("loading").classList.add("d-none");
+    if (!listing) return $("not-found").classList.remove("d-none");
+    if (uid) { try { wished = (await getWishlistIds(uid)).has(id); } catch (e) { console.warn("[WISHLIST]", e.code); } }
+    try { sellerRatings = await getSellerRatings(listing.sellerId); if (uid && listing.soldTo === uid) myRating = await getMyRating(id, uid); } catch (e) { console.warn("[RATING]", e.code); }
+    render();
+  }
+
+  function render() {
+    const l = listing, isOwner = uid && uid === l.sellerId;
+    const date = l.createdAt?.toDate ? l.createdAt.toDate().toLocaleDateString() : "";
+    const tags = [l.isGiveaway ? "Free giveaway" : "", l.isBarter ? "Barter" : ""].filter(Boolean);
+
+    $("content").innerHTML = `
+      <img id="main-photo" src="${l.photos?.[0] || ""}" alt="${esc(l.title)}" />
+      <div class="d-flex gap-2 mt-2">${(l.photos || []).map((p, i) =>
+        `<img class="t ${i === 0 ? "active" : ""}" src="${p}" data-i="${i}" alt="Photo ${i + 1}">`).join("")}</div>
+
+      <div class="d-flex justify-content-between align-items-start mt-3 gap-2">
+        <h1 class="h4 mb-0">${esc(l.title)}</h1>
+        <div class="d-flex align-items-center gap-2">
+          <button id="heart-btn" class="btn btn-sm btn-outline-danger" aria-label="Save to wishlist"><i class="bi ${wished ? "bi-heart-fill" : "bi-heart"}"></i></button>
+          <span class="badge ${STATUS_CLASS[l.status] || "bg-secondary"}">${esc(l.status)}</span>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold text-success my-1">${priceLabel(l)}</div>
+      ${l.isBarter ? `<p class="mb-2"><strong>Wants:</strong> ${esc(l.barterWanted)}</p>` : ""}
+      <p class="text-muted small mb-3">${esc(l.category)} · ${esc(l.condition)}${tags.length ? " · " + tags.join(", ") : ""}${date ? " · Posted " + date : ""}</p>
+      <p style="white-space:pre-wrap">${esc(l.description)}</p>
+      ${l.isBundle && l.bundleItems?.length ? `<div class="border rounded p-3 mb-3"><div class="fw-semibold mb-1">📦 Bundle includes</div><ul class="mb-0 ps-3" style="list-style:disc">${l.bundleItems.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>` : ""}
+
+      <ul class="list-unstyled small text-muted">
+        <li><i class="bi bi-mortarboard"></i> ${esc(l.department || "Any department")}, semester ${esc(l.semester || "-")}</li>
+        <li><i class="bi bi-geo-alt"></i> Suggested meetup: ${esc(l.meetupPoint || "Library")}</li>
+      </ul>
+
+      <a class="d-flex align-items-center gap-2 p-3 border rounded text-decoration-none text-dark mb-3" href="/public-profile.html?uid=${encodeURIComponent(l.sellerId)}&id=${encodeURIComponent(l.sellerId)}">
+        <i class="bi bi-person-circle fs-3"></i><div><div class="fw-semibold">${esc(l.sellerName || "Student")}</div><div class="small text-muted">View seller profile</div></div>
+      </a>
+
+      ${reviewsBox()}
+      ${isOwner ? ownerControls() : buyerControls()}
+      ${!isOwner && uid ? reportLinks() : ""}`;
+
+    $("content").classList.remove("d-none");
+    document.querySelectorAll(".t").forEach(t => t.onclick = () => {
+      $("main-photo").src = t.src;
+      document.querySelectorAll(".t").forEach(x => x.classList.toggle("active", x === t));
+    });
+    $("status-select")?.addEventListener("change", changeStatus);
+    $("delete-btn")?.addEventListener("click", removeListing);
+    $("heart-btn")?.addEventListener("click", async () => {
+      if (!uid) return showToast("Log in to save items", "info");
+      const on = !wished;
+      try { await toggleWishlist(uid, id, on, listing); wished = on; showToast(on ? "Saved to wishlist" : "Removed from wishlist", "success"); render(); }
+      catch (err) { console.error("[WISHLIST]", err); showToast("Could not update wishlist", "error"); }
+    });
+    $("chat-btn")?.addEventListener("click", () => location.href = "/chat.html?listing=" + encodeURIComponent(id));
+    document.querySelectorAll(".star-btn").forEach(b => b.onclick = () => {
+      pick = +b.dataset.n;
+      document.querySelectorAll(".star-btn").forEach(x => x.textContent = +x.dataset.n <= pick ? "★" : "☆");
+    });
+    $("rate-btn")?.addEventListener("click", submitMyRating);
+    $("report-listing")?.addEventListener("click", () => openReportDialog({ type: "listing", targetId: id, targetName: listing.title, listingId: id }));
+    $("report-seller")?.addEventListener("click", () => openReportDialog({ type: "user", targetId: listing.sellerId, targetName: listing.sellerName || "this seller", listingId: id }));
+  }
+
+  function ownerControls() {
+    const sold = listing.status === "sold";
+    return `<div class="border rounded p-3">
+      <label class="form-label fw-semibold">Listing status</label>
+      <select id="status-select" class="form-select mb-3" ${sold ? "disabled" : ""}>
+        ${["available", "reserved", "sold"].map(s => `<option value="${s}" ${listing.status === s ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}
+      </select>
+      <div class="d-flex gap-2">
+        ${sold ? "" : `<a href="/post-listing.html?edit=${id}" class="cm-btn cm-btn--outline-primary flex-fill text-center">Edit listing</a>`}
+        <button id="delete-btn" class="btn btn-outline-danger flex-fill">Delete listing</button>
+      </div>
+      ${sold ? `<div class="small text-muted mt-2">Sold listings can no longer be edited.</div>` : ""}
+    </div>`;
+  }
+
+  function buyerControls() {
+    if (uid && listing.status === "sold" && listing.soldTo === uid) return ratingCard();
+    if (!uid) return `<a href="/login.html" class="cm-btn cm-btn--accent w-100 text-center">Log in to chat with the seller</a>`;
+    if (listing.status === "sold") return `<div class="alert alert-secondary">This item has been sold.</div>`;
+    return `<button id="chat-btn" class="cm-btn cm-btn--accent w-100">Chat with seller</button>`;
+  }
+
+  async function changeStatus(e) {
+    const s = e.target.value;
+    if (s === "sold") { e.target.value = listing.status; return openSoldDialog(); }
+    try { await setListingStatus(id, s); listing.status = s; showToast("Status updated", "success"); render(); }
+    catch (err) { console.error(err); showToast("Could not update status", "error"); e.target.value = listing.status; }
+  }
+
+  function reportLinks() {
+    return `<div class="text-center small mt-3"><button id="report-listing" class="btn btn-link btn-sm text-muted">Report listing</button> · <button id="report-seller" class="btn btn-link btn-sm text-muted">Report seller</button></div>`;
+  }
+
+  const stars = n => "★".repeat(Math.round(n)) + "☆".repeat(5 - Math.round(n));
+
+  function reviewsBox() {
+    if (!sellerRatings.length) return `<div class="small text-muted mb-3">No reviews for this seller yet.</div>`;
+    const avg = sellerRatings.reduce((t, r) => t + r.stars, 0) / sellerRatings.length;
+    return `<div class="mb-3"><div class="fw-semibold"><span class="text-warning">${stars(avg)}</span> ${avg.toFixed(1)}
+      <span class="small text-muted">(${sellerRatings.length} review${sellerRatings.length === 1 ? "" : "s"})</span></div>
+      ${sellerRatings.filter(r => r.comment).slice(0, 3).map(r => `<div class="small border-start ps-2 mt-1">"${esc(r.comment)}" <span class="text-muted">- ${esc(r.buyerName)}</span></div>`).join("")}</div>`;
+  }
+
+  function ratingCard() {
+    if (myRating) return `<div class="alert alert-success">You rated this seller <span class="text-warning">${stars(myRating.stars)}</span>. Thank you!</div>`;
+    return `<div class="border rounded p-3"><div class="fw-semibold mb-1">You bought this item. Rate the seller</div>
+      <div class="mb-2">${[1,2,3,4,5].map(n => `<button type="button" class="star-btn btn btn-link p-0 me-1 fs-2 text-warning text-decoration-none" data-n="${n}">☆</button>`).join("")}</div>
+      <textarea id="rate-comment" class="form-control mb-2" rows="2" maxlength="300" placeholder="Short comment (optional)"></textarea>
+      <button id="rate-btn" class="cm-btn cm-btn--accent w-100">Submit rating</button></div>`;
+  }
+
+  async function submitMyRating() {
+    if (!pick) return showToast("Please choose 1 to 5 stars", "error");
+    try {
+      myRating = await submitRating(listing, { uid }, pick, $("rate-comment").value);
+      sellerRatings = await getSellerRatings(listing.sellerId);
+      showToast("Rating submitted", "success"); render();
+    } catch (err) { console.error(err); showToast("Could not submit rating", "error"); }
+  }
+
+  async function openSoldDialog() {
+    $("sold-dlg").style.display = "flex";
+    $("buyer-list").textContent = "Loading...";
+    let buyers = [];
+    try { buyers = await getBuyersForListing(uid, id); } catch (e) { console.warn("[SOLD]", e.code); }
+    $("buyer-list").innerHTML = buyers.map((b, i) =>
+      `<label class="d-block p-2 border rounded mb-1"><input type="radio" name="buyer" value="${esc(b.id)}" data-name="${esc(b.name)}" ${i === 0 ? "checked" : ""}> ${esc(b.name)}</label>`).join("") +
+      `<label class="d-block p-2 border rounded"><input type="radio" name="buyer" value="" ${buyers.length ? "" : "checked"}> Sold outside CampusMart (no rating)</label>`;
+  }
+  $("sold-cancel").onclick = () => $("sold-dlg").style.display = "none";
+  $("sold-ok").onclick = async () => {
+    const r = document.querySelector('input[name="buyer"]:checked');
+    const buyer = r && r.value ? { id: r.value, name: r.dataset.name } : null;
+    try {
+      await markSold(listing, buyer);
+      Object.assign(listing, { status: "sold", soldTo: buyer ? buyer.id : null });
+      $("sold-dlg").style.display = "none"; showToast("Marked as sold", "success"); render();
+    } catch (err) { console.error(err); showToast("Could not mark as sold", "error"); }
+  };
+
+  async function removeListing() {
+    if (!confirm("Delete this listing permanently?")) return;
+    try { await deleteListing(id); showToast("Listing deleted", "success"); setTimeout(() => location.replace("/profile.html"), 600); }
+    catch (err) { console.error(err); showToast("Could not delete listing", "error"); }
+  }
+
+  // Listings are viewable by guests too; we only need the uid to show owner controls.
+  onAuthStateChanged(auth, user => { uid = user ? user.uid : null; load(); });
+</script>
+<script type="module" src="/js/chat-badge.js"></script>
+</body>
+</html>

@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — CampusMart</title>
+  <meta name="description" content="Sign in to CampusMart — the verified student marketplace for University of AJK." />
+
+  <!-- Bootstrap 5 CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- CampusMart CSS -->
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/auth.css" />
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1a4078" />
+
+
+  <link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/auth.css" />   <!-- agar ho -->
+<link rel="stylesheet" href="/css/brand.css" />  <!-- ← YAHAN, sab se last -->
+
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════════════════════╗ -->
+<!-- ║               AUTHENTICATION PAGE LAYOUT                ║ -->
+<!-- ╚══════════════════════════════════════════════════════════╝ -->
+
+<main class="auth-page">
+
+  <!-- ── LEFT HERO PANEL (Desktop Only) ─────────────────────── -->
+  <section class="auth-hero">
+    <!-- Brand -->
+    <div class="auth-hero__brand">
+      <div class="auth-hero__logo">🛒</div>
+      <div class="auth-hero__brand-name">Campus<span>Mart</span></div>
+    </div>
+
+    <!-- Tagline -->
+    <h2 class="auth-hero__tagline">
+      Buy & Sell within<br/>
+      your <em>Campus</em>,<br/>
+      safely.
+    </h2>
+
+    <!-- Description -->
+    <p class="auth-hero__desc">
+      A verified marketplace exclusively for UAJK students.
+      Trade books, notes, electronics and more — only with
+      fellow students you can trust.
+    </p>
+
+    <!-- Feature Highlights -->
+    <div class="auth-hero__features">
+      <div class="auth-hero__feature">
+        <div class="auth-hero__feature-icon">✅</div>
+        <span>Verified students only — no fake sellers</span>
+      </div>
+      <div class="auth-hero__feature">
+        <div class="auth-hero__feature-icon">💬</div>
+        <span>Real-time chat with buyers & sellers</span>
+      </div>
+      <div class="auth-hero__feature">
+        <div class="auth-hero__feature-icon">📚</div>
+        <span>Semester Book Match — find your books fast</span>
+      </div>
+      <div class="auth-hero__feature">
+        <div class="auth-hero__feature-icon">⭐</div>
+        <span>Trust Scores — know who you're dealing with</span>
+      </div>
+    </div>
+
+    <!-- University Badge -->
+    <div class="auth-hero__uni-badge">
+      🎓 University of Azad Jammu & Kashmir, Muzaffarabad
+    </div>
+  </section>
+
+  <!-- ── RIGHT FORM PANEL ────────────────────────────────────── -->
+  <section class="auth-form-panel">
+    <div class="auth-form-panel__inner">
+
+      <!-- Mobile Brand (hidden on desktop) -->
+      <div class="auth-mobile-brand">
+        <div class="auth-mobile-brand__logo">🛒</div>
+        <div class="auth-mobile-brand__name">Campus<span>Mart</span></div>
+      </div>
+
+      <!-- Tab Switcher: Login / Register -->
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" id="tab-login"
+                role="tab" aria-controls="panel-login" aria-selected="true"
+                onclick="switchTab('login')">
+          Login
+        </button>
+        <button class="auth-tab" id="tab-register"
+                role="tab" aria-controls="panel-register" aria-selected="false"
+                onclick="switchTab('register')">
+          Register
+        </button>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════ -->
+      <!-- LOGIN FORM                                          -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <div id="panel-login" role="tabpanel" aria-labelledby="tab-login">
+        <h1 class="auth-form-title">Welcome back! 👋</h1>
+        <p class="auth-form-subtitle">Sign in to your CampusMart account.</p>
+
+        <form id="login-form" novalidate>
+
+          <!-- Email -->
+          <div class="cm-form-group">
+            <label for="login-email" class="cm-label">
+              Email Address <span class="required">*</span>
+            </label>
+            <div class="cm-input-icon-wrap">
+              <i class="bi bi-envelope cm-input-icon"></i>
+              <input type="email" id="login-email" name="email"
+                     class="cm-input" placeholder="your@email.com"
+                     autocomplete="email" required />
+            </div>
+            <span class="cm-field-error" id="login-email-error" hidden></span>
+          </div>
+
+          <!-- Password -->
+          <div class="cm-form-group">
+            <label for="login-password" class="cm-label">
+              Password <span class="required">*</span>
+            </label>
+            <div class="cm-input-icon-wrap">
+              <i class="bi bi-lock cm-input-icon"></i>
+              <input type="password" id="login-password" name="password"
+                     class="cm-input" placeholder="Enter your password"
+                     autocomplete="current-password" required
+                     style="padding-left:2.75rem; padding-right:3rem;" />
+              <button type="button" class="cm-input-toggle"
+                      onclick="togglePassword('login-password', this)"
+                      aria-label="Toggle password visibility">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            <span class="cm-field-error" id="login-password-error" hidden></span>
+          </div>
+
+          <!-- Forgot Password -->
+          <div class="d-flex justify-content-end mb-4">
+            <a href="#" onclick="showForgotPassword(event)"
+               class="cm-fs-sm cm-text-accent">
+              Forgot password?
+            </a>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="cm-btn cm-btn--primary cm-btn--full"
+                  id="login-btn">
+            <i class="bi bi-box-arrow-in-right"></i>
+            Sign In
+          </button>
+
+          <!-- Error message area -->
+          <div id="login-error-msg" class="cm-alert cm-alert--danger mt-4" hidden>
+            <i class="bi bi-exclamation-circle-fill"></i>
+            <span id="login-error-text"></span>
+          </div>
+        </form>
+
+        <div class="cm-divider--text mt-5">
+          Don't have an account?
+        </div>
+        <button class="cm-btn cm-btn--outline-primary cm-btn--full"
+                onclick="switchTab('register')">
+          Create Account
+        </button>
+      </div>
+      <!-- /LOGIN FORM -->
+
+
+      <!-- ════════════════════════════════════════════════════ -->
+      <!-- REGISTER FORM                                       -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <div id="panel-register" role="tabpanel" aria-labelledby="tab-register" hidden>
+        <h1 class="auth-form-title">Create Account 🎓</h1>
+        <p class="auth-form-subtitle">Join CampusMart — fill in your student details.</p>
+
+        <!-- Verification Info Box -->
+        <div class="verification-info">
+          <div class="verification-info__title">
+            <i class="bi bi-shield-check"></i>
+            How verification works
+          </div>
+          <ul class="verification-info__list">
+            <li>Upload your student ID card below</li>
+            <li>Our admin verifies it within 24 hours</li>
+            <li>You'll be notified when approved</li>
+            <li>After approval, you get full access</li>
+          </ul>
+        </div>
+
+        <form id="register-form" novalidate>
+
+          <!-- Full Name -->
+          <div class="cm-form-group">
+            <label for="reg-name" class="cm-label">
+              Full Name <span class="required">*</span>
+            </label>
+            <div class="cm-input-icon-wrap">
+              <i class="bi bi-person cm-input-icon"></i>
+              <input type="text" id="reg-name" name="name"
+                     class="cm-input" placeholder="Muhammad Ali"
+                     autocomplete="name" required minlength="3" />
+            </div>
+            <span class="cm-field-error" id="reg-name-error" hidden></span>
+          </div>
+
+          <!-- Email -->
+          <div class="cm-form-group">
+            <label for="reg-email" class="cm-label">
+              Email Address <span class="required">*</span>
+            </label>
+            <div class="cm-input-icon-wrap">
+              <i class="bi bi-envelope cm-input-icon"></i>
+              <input type="email" id="reg-email" name="email"
+                     class="cm-input" placeholder="student@uajk.edu.pk"
+                     autocomplete="email" required />
+            </div>
+            <span class="cm-field-error" id="reg-email-error" hidden></span>
+          </div>
+
+          <!-- Department & Semester (Side by Side) -->
+          <div class="row g-3">
+            <div class="col-7">
+              <div class="cm-form-group" style="margin-bottom:0;">
+                <label for="reg-department" class="cm-label">
+                  Department <span class="required">*</span>
+                </label>
+                <select id="reg-department" name="department"
+                        class="cm-select" required>
+                  <option value="">Select dept.</option>
+                </select>
+                <span class="cm-field-error" id="reg-dept-error" hidden></span>
+              </div>
+            </div>
+            <div class="col-5">
+              <div class="cm-form-group" style="margin-bottom:0;">
+                <label for="reg-semester" class="cm-label">
+                  Semester <span class="required">*</span>
+                </label>
+                <select id="reg-semester" name="semester"
+                        class="cm-select" required>
+                  <option value="">Sem</option>
+                </select>
+                <span class="cm-field-error" id="reg-sem-error" hidden></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="cm-form-group mt-3">
+            <label for="reg-password" class="cm-label">
+              Password <span class="required">*</span>
+            </label>
+            <div class="cm-input-icon-wrap">
+              <i class="bi bi-lock cm-input-icon"></i>
+              <input type="password" id="reg-password" name="password"
+                     class="cm-input" placeholder="Min. 8 characters"
+                     autocomplete="new-password" required minlength="8"
+                     style="padding-left:2.75rem; padding-right:3rem;"
+                     oninput="updatePasswordStrength(this.value)" />
+              <button type="button" class="cm-input-toggle"
+                      onclick="togglePassword('reg-password', this)"
+                      aria-label="Toggle password visibility">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            <!-- Password Strength Meter -->
+            <div class="password-strength" id="pwd-strength">
+              <div class="password-strength__bars">
+                <div class="password-strength__bar" id="bar-1"></div>
+                <div class="password-strength__bar" id="bar-2"></div>
+                <div class="password-strength__bar" id="bar-3"></div>
+                <div class="password-strength__bar" id="bar-4"></div>
+              </div>
+              <span class="password-strength__label" id="pwd-strength-label"></span>
+            </div>
+            <span class="cm-field-error" id="reg-pw-error" hidden></span>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="cm-form-group">
+            <label for="reg-confirm-password" class="cm-label">
+              Confirm Password <span class="required">*</span>
+            </label>
+            <div class="cm-input-icon-wrap">
+              <i class="bi bi-lock-fill cm-input-icon"></i>
+              <input type="password" id="reg-confirm-password"
+                     name="confirmPassword" class="cm-input"
+                     placeholder="Repeat your password"
+                     autocomplete="new-password" required
+                     style="padding-left:2.75rem; padding-right:3rem;" />
+              <button type="button" class="cm-input-toggle"
+                      onclick="togglePassword('reg-confirm-password', this)"
+                      aria-label="Toggle password visibility">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            <span class="cm-field-error" id="reg-cpw-error" hidden></span>
+          </div>
+
+          <!-- Student ID Upload -->
+          <div class="cm-form-group">
+            <label class="cm-label">
+              Student ID Card <span class="required">*</span>
+            </label>
+            <div class="upload-box" id="id-upload-box"
+                 ondragover="handleDragOver(event)"
+                 ondragleave="handleDragLeave(event)"
+                 ondrop="handleDrop(event)">
+              <input type="file" id="student-id-input"
+                     accept="image/jpeg,image/png,image/jpg,image/webp"
+                     onchange="handleIdUpload(event)"
+                     aria-label="Upload student ID card" />
+              <!-- Placeholder -->
+              <div class="upload-box__placeholder">
+                <i class="bi bi-card-image upload-box__icon"></i>
+                <p class="upload-box__text">Click to upload your Student ID</p>
+                <p class="upload-box__hint">JPG, PNG or WEBP • Max 5 MB</p>
+              </div>
+              <!-- Preview (shown after upload) -->
+              <div class="upload-box__preview">
+                <button type="button" class="upload-box__preview-remove"
+                        onclick="removeIdImage(event)"
+                        aria-label="Remove uploaded image">
+                  <i class="bi bi-x"></i>
+                </button>
+                <img id="id-preview-img" src="" alt="Student ID preview" />
+                <p class="cm-fs-xs cm-text-muted mt-2 mb-0">
+                  ✅ Image selected — will be compressed & saved securely
+                </p>
+              </div>
+            </div>
+            <span class="cm-field-error" id="reg-id-error" hidden></span>
+          </div>
+
+          <!-- Terms -->
+          <div class="cm-form-group">
+            <label class="cm-check">
+              <input type="checkbox" id="reg-terms" class="cm-check__input" required />
+              <span class="cm-check__label">
+                I agree to the
+                <a href="#" class="cm-text-accent">Terms of Service</a>
+                and confirm that I am a current student of UAJK.
+              </span>
+            </label>
+            <span class="cm-field-error" id="reg-terms-error" hidden></span>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="cm-btn cm-btn--accent cm-btn--full"
+                  id="register-btn">
+            <i class="bi bi-person-plus-fill"></i>
+            Create My Account
+          </button>
+
+          <!-- Error message area -->
+          <div id="register-error-msg" class="cm-alert cm-alert--danger mt-4" hidden>
+            <i class="bi bi-exclamation-circle-fill"></i>
+            <span id="register-error-text"></span>
+          </div>
+        </form>
+
+        <div class="cm-divider--text mt-5">
+          Already have an account?
+        </div>
+        <button class="cm-btn cm-btn--outline-primary cm-btn--full"
+                onclick="switchTab('login')">
+          Sign In
+        </button>
+      </div>
+      <!-- /REGISTER FORM -->
+
+    </div><!-- /.auth-form-panel__inner -->
+  </section>
+  <!-- /RIGHT FORM PANEL -->
+
+</main>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- FORGOT PASSWORD MODAL                                       -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div id="forgot-modal" class="position-fixed inset-0 d-none"
+     style="inset:0; background:rgba(0,0,0,0.5); z-index:400;
+            display:none !important; align-items:center; justify-content:center; padding:1rem;">
+  <div class="cm-card" style="max-width:400px; width:100%;" role="dialog"
+       aria-modal="true" aria-labelledby="forgot-modal-title">
+    <div class="cm-card__body">
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2 class="h5 fw-bold mb-0" id="forgot-modal-title">Reset Password</h2>
+        <button class="cm-btn cm-btn--ghost cm-btn--sm" onclick="closeForgotModal()"
+                aria-label="Close modal">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <p class="cm-fs-sm cm-text-muted mb-4">
+        Enter your email and we'll send you a password reset link.
+      </p>
+      <form id="forgot-form" novalidate>
+        <div class="cm-form-group">
+          <label for="forgot-email" class="cm-label">Email Address</label>
+          <div class="cm-input-icon-wrap">
+            <i class="bi bi-envelope cm-input-icon"></i>
+            <input type="email" id="forgot-email" class="cm-input"
+                   placeholder="your@email.com" required />
+          </div>
+        </div>
+        <div id="forgot-success" class="cm-alert cm-alert--success mb-3" hidden>
+          <i class="bi bi-check-circle-fill"></i>
+          <span>Reset link sent! Check your inbox.</span>
+        </div>
+        <div id="forgot-error" class="cm-alert cm-alert--danger mb-3" hidden>
+          <i class="bi bi-exclamation-circle-fill"></i>
+          <span id="forgot-error-text"></span>
+        </div>
+        <button type="submit" class="cm-btn cm-btn--primary cm-btn--full" id="forgot-btn">
+          <i class="bi bi-send"></i>
+          Send Reset Link
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap 5 JS (for any Bootstrap utilities) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- PAGE SCRIPT (ES Modules)                                    -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<script type="module">
+  import { auth }                from "/js/firebase.js";
+  import { onAuthStateChanged }  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    registerUser,
+    loginUser,
+    resetPassword,
+    checkPasswordStrength,
+    compressStudentId,
+  }                              from "/js/auth.js";
+  import { showToast, setLoading } from "/js/app.js";
+  import { APP_CONSTANTS }       from "/js/firebase.js";
+
+  // ── Redirect if already logged in ──────────────────────────
+  onAuthStateChanged(auth, (user) => {
+    if (user) window.location.replace("/index.html");
+  });
+
+  // ── Populate Department & Semester dropdowns ────────────────
+  const deptSelect = document.getElementById("reg-department");
+  const semSelect  = document.getElementById("reg-semester");
+
+  APP_CONSTANTS.DEPARTMENTS.forEach((d) => {
+    deptSelect.innerHTML += `<option value="${d}">${d}</option>`;
+  });
+  APP_CONSTANTS.SEMESTERS.forEach((s) => {
+    semSelect.innerHTML += `<option value="${s}">Sem ${s}</option>`;
+  });
+
+  // ── Tab Switcher ────────────────────────────────────────────
+  window.switchTab = (tab) => {
+    const isLogin = tab === "login";
+    document.getElementById("panel-login").hidden    = !isLogin;
+    document.getElementById("panel-register").hidden = isLogin;
+    document.getElementById("tab-login").classList.toggle("active", isLogin);
+    document.getElementById("tab-register").classList.toggle("active", !isLogin);
+    // Clear all errors on switch
+    document.querySelectorAll(".cm-field-error").forEach(el => el.hidden = true);
+    document.getElementById("login-error-msg").hidden    = true;
+    document.getElementById("register-error-msg").hidden = true;
+  };
+
+  // ── Toggle Password Visibility ──────────────────────────────
+  window.togglePassword = (inputId, btn) => {
+    const input = document.getElementById(inputId);
+    const icon  = btn.querySelector("i");
+    if (input.type === "password") {
+      input.type = "text";
+      icon.className = "bi bi-eye-slash";
+    } else {
+      input.type = "password";
+      icon.className = "bi bi-eye";
+    }
+  };
+
+  // ── Password Strength Meter ─────────────────────────────────
+  window.updatePasswordStrength = (value) => {
+    const { score, label, color } = checkPasswordStrength(value);
+    const bars  = [1, 2, 3, 4].map(n => document.getElementById(`bar-${n}`));
+    const labelEl = document.getElementById("pwd-strength-label");
+    const classMap = { weak: "filled-weak", fair: "filled-fair", good: "filled-good", strong: "filled-strong" };
+
+    bars.forEach((bar, i) => {
+      bar.className = "password-strength__bar";
+      if (i < score && color) bar.classList.add(classMap[color]);
+    });
+    labelEl.textContent  = label ? `Password strength: ${label}` : "";
+    labelEl.style.color  = color === "weak"  ? "var(--color-danger)"
+                          : color === "fair"  ? "var(--color-warning)"
+                          : color === "good"  ? "var(--color-info)"
+                          : color === "strong"? "var(--color-success)"
+                          : "";
+  };
+
+  // ── Student ID Upload Handling ──────────────────────────────
+  let selectedIdFile = null;
+
+  window.handleIdUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showError("reg-id-error", "File too large. Max size is 5 MB.");
+      return;
+    }
+    selectedIdFile = file;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      document.getElementById("id-preview-img").src = ev.target.result;
+      document.getElementById("id-upload-box").classList.add("has-preview");
+    };
+    reader.readAsDataURL(file);
+    clearError("reg-id-error");
+  };
+
+  window.removeIdImage = (e) => {
+    e.stopPropagation();
+    selectedIdFile = null;
+    document.getElementById("student-id-input").value = "";
+    document.getElementById("id-preview-img").src = "";
+    document.getElementById("id-upload-box").classList.remove("has-preview");
+  };
+
+  window.handleDragOver  = (e) => { e.preventDefault(); e.currentTarget.classList.add("drag-over"); };
+  window.handleDragLeave = (e) => { e.currentTarget.classList.remove("drag-over"); };
+  window.handleDrop = (e) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove("drag-over");
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      // Simulate file input change
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      document.getElementById("student-id-input").files = dt.files;
+      window.handleIdUpload({ target: { files: [file] } });
+    }
+  };
+
+  // ── Error Helpers ───────────────────────────────────────────
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = `⚠ ${msg}`;
+    el.hidden = false;
+  }
+  function clearError(id) {
+    const el = document.getElementById(id);
+    el.textContent = "";
+    el.hidden = true;
+  }
+  function clearAllRegErrors() {
+    ["reg-name-error","reg-email-error","reg-dept-error","reg-sem-error",
+     "reg-pw-error","reg-cpw-error","reg-id-error","reg-terms-error"].forEach(clearError);
+    document.getElementById("register-error-msg").hidden = true;
+  }
+  function clearAllLoginErrors() {
+    ["login-email-error","login-password-error"].forEach(clearError);
+    document.getElementById("login-error-msg").hidden = true;
+  }
+
+  // ── Firebase Error → Friendly Message ──────────────────────
+  function getFriendlyError(code) {
+    const map = {
+      "auth/user-not-found":       "No account found with this email.",
+      "auth/wrong-password":       "Incorrect password. Please try again.",
+      "auth/email-already-in-use": "This email is already registered. Try logging in.",
+      "auth/invalid-email":        "Please enter a valid email address.",
+      "auth/weak-password":        "Password must be at least 8 characters.",
+      "auth/too-many-requests":    "Too many attempts. Please wait a moment and try again.",
+      "auth/network-request-failed": "Network error. Check your internet connection.",
+      "auth/invalid-credential":   "Incorrect email or password. Please try again.",
+    };
+    return map[code] || "Something went wrong. Please try again.";
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // LOGIN FORM SUBMIT
+  // ══════════════════════════════════════════════════════════
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearAllLoginErrors();
+
+    const email    = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+
+    // Client-side validation
+    let valid = true;
+    if (!email) { showError("login-email-error", "Email is required."); valid = false; }
+    if (!password) { showError("login-password-error", "Password is required."); valid = false; }
+    if (!valid) return;
+
+    // Show loading state on button
+    const btn = document.getElementById("login-btn");
+    btn.classList.add("cm-btn--loading");
+    btn.disabled = true;
+
+    try {
+      await loginUser(email, password);
+      // loginUser handles the redirect internally
+    } catch (err) {
+      const errMsg = document.getElementById("login-error-msg");
+      document.getElementById("login-error-text").textContent = getFriendlyError(err.code);
+      errMsg.hidden = false;
+    } finally {
+      btn.classList.remove("cm-btn--loading");
+      btn.disabled = false;
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════
+  // REGISTER FORM SUBMIT
+  // ══════════════════════════════════════════════════════════
+  document.getElementById("register-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearAllRegErrors();
+
+    const name       = document.getElementById("reg-name").value.trim();
+    const email      = document.getElementById("reg-email").value.trim();
+    const department = document.getElementById("reg-department").value;
+    const semester   = document.getElementById("reg-semester").value;
+    const password   = document.getElementById("reg-password").value;
+    const confirm    = document.getElementById("reg-confirm-password").value;
+    const terms      = document.getElementById("reg-terms").checked;
+
+    // Client-side validation
+    let valid = true;
+    if (name.length < 3)   { showError("reg-name-error",  "Name must be at least 3 characters."); valid = false; }
+    if (!email)            { showError("reg-email-error", "Email is required.");                   valid = false; }
+    if (!department)       { showError("reg-dept-error",  "Please select your department.");       valid = false; }
+    if (!semester)         { showError("reg-sem-error",   "Please select your semester.");         valid = false; }
+    if (password.length<8) { showError("reg-pw-error",    "Password must be at least 8 characters."); valid = false; }
+    if (password !== confirm) { showError("reg-cpw-error","Passwords do not match.");              valid = false; }
+    if (!selectedIdFile)   { showError("reg-id-error",    "Please upload your Student ID card.");  valid = false; }
+    if (!terms)            { showError("reg-terms-error", "You must agree to the terms.");         valid = false; }
+    if (!valid) return;
+
+    // Show loading
+    const btn = document.getElementById("register-btn");
+    btn.classList.add("cm-btn--loading");
+    btn.disabled = true;
+    setLoading(true, "Creating your account…");
+
+    try {
+      await registerUser({ name, email, password, department, semester }, selectedIdFile);
+      // registerUser redirects to /pending.html on success
+    } catch (err) {
+      const errMsg = document.getElementById("register-error-msg");
+      document.getElementById("register-error-text").textContent = getFriendlyError(err.code);
+      errMsg.hidden = false;
+    } finally {
+      btn.classList.remove("cm-btn--loading");
+      btn.disabled = false;
+      setLoading(false);
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════
+  // FORGOT PASSWORD MODAL
+  // ══════════════════════════════════════════════════════════
+  const forgotModal = document.getElementById("forgot-modal");
+
+  window.showForgotPassword = (e) => {
+    e.preventDefault();
+    forgotModal.style.display = "flex";
+    document.getElementById("forgot-email").focus();
+  };
+
+  window.closeForgotModal = () => {
+    forgotModal.style.display = "none";
+    document.getElementById("forgot-success").hidden = true;
+    document.getElementById("forgot-error").hidden   = true;
+    document.getElementById("forgot-email").value    = "";
+  };
+
+  // Close modal on backdrop click
+  forgotModal.addEventListener("click", (e) => {
+    if (e.target === forgotModal) closeForgotModal();
+  });
+
+  // Close modal on Escape key
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && forgotModal.style.display === "flex") closeForgotModal();
+  });
+
+  document.getElementById("forgot-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("forgot-email").value.trim();
+    if (!email) return;
+
+    const btn = document.getElementById("forgot-btn");
+    btn.classList.add("cm-btn--loading");
+    btn.disabled = true;
+    document.getElementById("forgot-success").hidden = true;
+    document.getElementById("forgot-error").hidden   = true;
+
+    try {
+      await resetPassword(email);
+      document.getElementById("forgot-success").hidden = false;
+    } catch (err) {
+      document.getElementById("forgot-error-text").textContent = getFriendlyError(err.code);
+      document.getElementById("forgot-error").hidden = false;
+    } finally {
+      btn.classList.remove("cm-btn--loading");
+      btn.disabled = false;
+    }
+  });
+
+  // ── Read URL param: auto-switch to register tab ─────────────
+  if (new URLSearchParams(window.location.search).get("tab") === "register") {
+    switchTab("register");
+  }
+</script>
+
+</body>
+</html>

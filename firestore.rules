@@ -1,0 +1,122 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ─────────────────────────────────────────
+    // Check if the request is from an authenticated user
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    // Check if the requesting user owns the document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Check if the user is a verified student
+    function isVerified() {
+      return isLoggedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.verificationStatus == 'verified';
+    }
+
+    // Check if the user is an administrator
+    function isAdmin() {
+      return isLoggedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ─── Users Collection ────────────────────────────────────────
+    // - Anyone logged in can read user profiles (for seller info, ratings)
+    // - A user can only write/update their OWN profile
+    // - Admins can update any user (for verification status changes)
+    match /users/{userId} {
+      allow read:   if isLoggedIn();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+
+      // Notifications sub-collection: user can read their own only
+      match /notifications/{notifId} {
+        allow read:   if isOwner(userId);
+        allow write:  if isAdmin() || isOwner(userId);
+      }
+    }
+
+    // ─── Categories Collection ───────────────────────────────────
+    // - Anyone can read (needed to populate dropdowns)
+    // - Only admins can create/update/delete categories (BR-005)
+    match /categories/{categoryId} {
+      allow read:   if true;
+      allow write:  if isAdmin();
+    }
+
+    // ─── Listings Collection ─────────────────────────────────────
+    // - Anyone can read listings (for browsing/search)
+    // - Only verified students can create listings (BR-001)
+    // - Only the listing's seller can edit or delete it (NFR-007)
+    // - Admins can delete any listing
+    match /listings/{listingId} {
+      allow read:   if true;
+      allow create: if isVerified() && request.auth.uid == request.resource.data.sellerId;
+      allow update: if isOwner(resource.data.sellerId) || isAdmin();
+      allow delete: if isOwner(resource.data.sellerId) || isAdmin();
+    }
+
+    // ─── Chat Threads Collection ─────────────────────────────────
+    // - Only buyer or seller of a thread can read it (NFR-007)
+    // - Only verified students can create chat threads (BR-001)
+    match /chatThreads/{threadId} {
+      allow read:   if isLoggedIn() &&
+                       (request.auth.uid == resource.data.buyerId ||
+                        request.auth.uid == resource.data.sellerId ||
+                        isAdmin());
+      allow create: if isVerified();
+      allow update: if isLoggedIn() &&
+                       (request.auth.uid == resource.data.buyerId ||
+                        request.auth.uid == resource.data.sellerId);
+      allow delete: if isAdmin();
+
+      // Messages sub-collection: same access as the parent thread
+      match /messages/{messageId} {
+        allow read:   if isLoggedIn() &&
+                         (request.auth.uid == get(/databases/$(database)/documents/chatThreads/$(threadId)).data.buyerId ||
+                          request.auth.uid == get(/databases/$(database)/documents/chatThreads/$(threadId)).data.sellerId ||
+                          isAdmin());
+        allow create: if isVerified() &&
+                         (request.auth.uid == get(/databases/$(database)/documents/chatThreads/$(threadId)).data.buyerId ||
+                          request.auth.uid == get(/databases/$(database)/documents/chatThreads/$(threadId)).data.sellerId);
+        allow update, delete: if false; // Messages are immutable
+      }
+    }
+
+    // ─── Ratings Collection ──────────────────────────────────────
+    // - Anyone logged in can read ratings (shown on profiles)
+    // - Only verified users can write ratings
+    match /ratings/{ratingId} {
+      allow read:   if isLoggedIn();
+      allow create: if isVerified() && request.auth.uid == request.resource.data.raterId;
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── Reports Collection ──────────────────────────────────────
+    // - Only admins can read all reports
+    // - Verified users can create reports; only the reporter can read their own
+    match /reports/{reportId} {
+      allow read:   if isAdmin() || (isLoggedIn() && request.auth.uid == resource.data.reportedBy);
+      allow create: if isVerified() && request.auth.uid == request.resource.data.reportedBy;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ─── Request Board Collection ────────────────────────────────
+    // - Anyone logged in can read requests (to respond to them)
+    // - Only verified users can post requests (BR-001)
+    // - Only the poster or admin can edit/delete
+    match /requestBoard/{requestId} {
+      allow read:   if isLoggedIn();
+      allow create: if isVerified() && request.auth.uid == request.resource.data.studentId;
+      allow update: if isOwner(resource.data.studentId) || isAdmin();
+      allow delete: if isOwner(resource.data.studentId) || isAdmin();
+    }
+  }
+}

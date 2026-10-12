@@ -1,0 +1,64 @@
+/* css/brand.css — CampusMart brand colours (orange + navy, from the logo). Loaded after main.css. */
+:root{
+  --brand-orange:#ff7f1e; --brand-orange-dark:#d96a0d; --brand-navy:#14213d;
+  --color-accent-50:#fff5eb; --color-accent-100:#ffe7cf; --color-accent-200:#ffcf9f; --color-accent-300:#ffb066;
+  --color-accent-400:#ff9340; --color-accent-500:#ff7f1e; --color-accent-600:#f06a0c; --color-accent-700:#cc5508;
+  --color-accent-800:#a3430a; --color-accent-900:#7a330c;
+  --color-primary-50:#eef2f9; --color-primary-100:#d9e2f1; --color-primary-200:#b5c6e2; --color-primary-300:#8aa3cc;
+  --color-primary-400:#5f7db3; --color-primary-500:#3d5e99; --color-primary-600:#2a4a80; --color-primary-700:#1f3868;
+  --color-primary-800:#172b52; --color-primary-900:#14213d;
+}
+/* top bar + logo (the emoji box is replaced by the logo on every page) */
+.cm-topbar{background:var(--brand-navy) !important}
+.cm-topbar__brand span{color:var(--brand-orange) !important}
+.cm-topbar__brand-icon{font-size:0 !important;color:transparent !important;padding:0 !important;width:40px !important;height:40px !important;
+  border-radius:10px !important;background:#fff url(/assets/logo-mark.png) center/cover no-repeat !important}
+/* buttons and highlights */
+.cm-btn--accent{background:var(--brand-orange) !important;border-color:var(--brand-orange) !important;color:#fff !important}
+.cm-btn--accent:hover{background:var(--brand-orange-dark) !important;border-color:var(--brand-orange-dark) !important}
+.cm-btn--outline-primary,.btn-outline-primary{color:var(--brand-navy) !important;border-color:var(--brand-navy) !important}
+.cm-btn--outline-primary:hover,.btn-outline-primary:hover{background:var(--brand-navy) !important;color:#fff !important}
+.btn-success{background-color:var(--brand-orange) !important;border-color:var(--brand-orange) !important;color:#fff !important}
+.btn-outline-success{color:var(--brand-orange-dark) !important;border-color:var(--brand-orange) !important}
+.btn-outline-success:hover{background:var(--brand-orange) !important;color:#fff !important}
+.text-success{color:var(--brand-orange-dark) !important}
+.nav-pills .nav-link.active{background:var(--brand-navy) !important}
+.cm-chip.active{background:var(--brand-navy) !important;border-color:var(--brand-navy) !important;color:#fff !important}
+/* feed, chat, floating buttons */
+.cmf-price{background:var(--brand-orange) !important}
+.cmf-chip.active{background:var(--brand-navy) !important;border-color:var(--brand-navy) !important}
+.b.me{background:var(--brand-orange) !important}
+#cm-chat-fab{background:var(--brand-navy) !important}
+#cm-install{background:var(--brand-orange) !important}
+.btn-primary{background:var(--brand-navy) !important;border-color:var(--brand-navy) !important;color:#fff !important}
+.btn-primary:hover{background:#1f3868 !important}
+/* layout safety net (Module 17): long unbroken words/links must never push the page sideways */
+body{overflow-wrap:break-word}
+.flex-grow-1,.row-item>div,.cm-card>div{min-width:0}
+.cm-topbar__brand{min-width:0}
+.cm-topbar__actions{flex:0 0 auto}
+@media (max-width:400px){
+  .cm-topbar{gap:6px}
+  .cm-topbar #nav-user-status .cm-badge-pill,.cm-topbar #nav-user-status .cm-btn{padding:3px 8px !important;font-size:.72rem !important}
+}
+
+/* ── Hero banner under the top bar (campus photo + navy gradient) ───────────────────────────── */
+.cm-hero{position:relative;overflow:hidden;display:flex;align-items:center;border-radius:24px;
+  min-height:clamp(250px,34vw,400px);color:#fff;
+  background:linear-gradient(135deg,#0b1d4a 0%,#14213d 55%,#1d4e89 100%);   /* shown while / if the photo is missing */
+  box-shadow:0 10px 30px rgba(20,33,61,.18)}
+.cm-hero__img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:72% 50%}
+.cm-hero__shade{position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(9,25,66,.96) 0%,rgba(9,25,66,.86) 30%,rgba(9,25,66,.38) 62%,rgba(9,25,66,0) 88%)}
+.cm-hero__body{position:relative;z-index:1;min-width:0;max-width:min(100%,880px);padding:clamp(20px,4.2vw,52px)}
+.cm-hero__pill{display:inline-flex;align-items:center;gap:8px;background:#fbbf24;color:#14213d;font-weight:700;
+  border-radius:999px;padding:7px 16px;font-size:clamp(.78rem,1.7vw,1rem);line-height:1.2}
+.cm-hero__title{margin:14px 0 8px;color:#fff;font-weight:800;line-height:1.1;font-size:clamp(1.5rem,4.8vw,3.1rem);
+  overflow-wrap:anywhere;text-wrap:balance;text-shadow:0 2px 12px rgba(0,0,0,.25)}
+.cm-hero__sub{margin:0;color:rgba(255,255,255,.9);font-size:clamp(.88rem,2vw,1.25rem);overflow-wrap:anywhere}
+.cm-hero__cta{margin-top:16px}
+@media (max-width:575.98px){
+  .cm-hero{border-radius:20px}
+  .cm-hero__img{object-position:80% 50%}
+  .cm-hero__shade{background:linear-gradient(90deg,rgba(9,25,66,.94) 0%,rgba(9,25,66,.8) 55%,rgba(9,25,66,.45) 100%)}
+}

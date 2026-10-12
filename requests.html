@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Request Board — CampusMart</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/brand.css" />
+<meta name="theme-color" content="#14213d" />
+</head>
+<body>
+<header class="cm-topbar">
+  <a href="/index.html" class="cm-topbar__brand"><div class="cm-topbar__brand-icon">🛒</div><div>Campus<span>Mart</span></div></a>
+</header>
+<main class="container pb-4" style="padding-top:100px;max-width:760px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Request Board</h1>
+    <button id="toggle-form" class="cm-btn cm-btn--accent">+ Ask for an item</button>
+  </div>
+  <div id="blocked" class="alert alert-warning d-none">Only verified students can post requests. <a href="/pending.html">Check your verification status</a>.</div>
+
+  <div id="form" class="border rounded p-3 mb-3 bg-white d-none">
+    <input id="r-title" class="form-control mb-2" maxlength="80" placeholder="What do you need? e.g. Calculus by Thomas, 12th edition" />
+    <div class="row g-2 mb-2">
+      <div class="col-7"><select id="r-cat" class="form-select"></select></div>
+      <div class="col-5"><input id="r-budget" type="number" min="0" class="form-control" placeholder="Max budget (Rs)" /></div>
+    </div>
+    <textarea id="r-details" class="form-control mb-2" rows="2" maxlength="300" placeholder="Details (edition, condition, semester...)"></textarea>
+    <div id="r-error" class="text-danger small mb-2"></div>
+    <button id="r-save" class="cm-btn cm-btn--accent w-100">Post request</button>
+  </div>
+
+  <div id="list"><div class="text-center text-muted py-5">Loading requests...</div></div>
+</main>
+
+<script type="module">
+  import { auth, db } from "/js/firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import "/js/app.js";
+  import { showToast } from "/js/app.js";
+  import { CATEGORIES, esc } from "/js/listings.js";
+  import { ensureThread } from "/js/chat.js";
+  import { listOpenRequests, createRequest, closeRequest, deleteRequest } from "/js/requests.js";
+
+  const $ = id => document.getElementById(id);
+  let me, profile = {}, verified = false, requests = [];
+  $("r-cat").innerHTML = CATEGORIES.map(c => `<option>${c}</option>`).join("");
+  $("toggle-form").onclick = () => verified ? $("form").classList.toggle("d-none") : $("blocked").classList.remove("d-none");
+
+  const ago = ts => { const m = Math.floor((Date.now() - (ts?.toMillis?.() || Date.now())) / 60000);
+    return m < 1 ? "just now" : m < 60 ? m + " min ago" : m < 1440 ? Math.floor(m / 60) + " h ago" : Math.floor(m / 1440) + " d ago"; };
+
+  function render() {
+    $("list").innerHTML = requests.length ? requests.map(r => {
+      const mine = r.requesterId === me.uid;
+      return `<div class="border rounded p-3 mb-2 bg-white">
+        <div class="fw-semibold">${esc(r.title)}</div>
+        <div class="small text-muted">${esc(r.category)}${r.maxBudget ? " · Budget Rs " + esc(r.maxBudget) : ""} · ${esc(r.requesterName)} · ${ago(r.createdAt)}</div>
+        ${r.details ? `<p class="small mb-2 mt-1">${esc(r.details)}</p>` : `<div class="mb-2"></div>`}
+        ${mine ? `<button class="btn btn-sm btn-outline-success" data-act="done" data-id="${esc(r.id)}">Mark fulfilled</button>
+                  <button class="btn btn-sm btn-outline-danger" data-act="del" data-id="${esc(r.id)}">Delete</button>`
+               : `<button class="btn btn-sm btn-success" data-act="have" data-id="${esc(r.id)}">I have this</button>`}
+      </div>`;
+    }).join("") : `<div class="text-center text-muted py-5">No open requests. Be the first to ask!</div>`;
+  }
+
+  async function load() {
+    try { requests = await listOpenRequests(); render(); }
+    catch (e) { console.error(e); $("list").innerHTML = `<div class="alert alert-danger">Could not load requests. Check firestore.rules for requestBoard.</div>`; }
+  }
+
+  $("list").addEventListener("click", async e => {
+    const b = e.target.closest("button[data-act]"); if (!b) return;
+    const r = requests.find(x => x.id === b.dataset.id); if (!r) return;
+    try {
+      if (b.dataset.act === "have") {
+        if (!verified) return $("blocked").classList.remove("d-none");
+        const tid = await ensureThread({ id: "req_" + r.id, title: "Request: " + r.title, sellerId: r.requesterId, sellerName: r.requesterName }, me, profile);
+        location.href = "/chat.html?thread=" + encodeURIComponent(tid);
+      } else if (b.dataset.act === "done") { await closeRequest(r.id); showToast("Marked as fulfilled", "success"); load(); }
+      else if (b.dataset.act === "del" && confirm("Delete this request?")) { await deleteRequest(r.id); showToast("Request deleted", "success"); load(); }
+    } catch (err) { console.error(err); showToast("Something went wrong", "error"); }
+  });
+
+  $("r-save").onclick = async () => {
+    const title = $("r-title").value.trim(), budget = $("r-budget").value;
+    if (title.length < 3) return $("r-error").textContent = "Enter what you need (at least 3 characters).";
+    $("r-error").textContent = "";
+    try {
+      await createRequest({ title, category: $("r-cat").value, details: $("r-details").value.trim(), maxBudget: budget ? Number(budget) : null,
+        department: profile.department || "" }, me, profile);
+      $("r-title").value = ""; $("r-details").value = ""; $("r-budget").value = ""; $("form").classList.add("d-none");
+      showToast("Request posted", "success"); load();
+    } catch (err) { console.error(err); $("r-error").textContent = "Could not post. Check firestore.rules for requestBoard."; }
+  };
+
+  onAuthStateChanged(auth, async user => {
+    if (!user) return location.replace("/login.html");
+    me = user;
+    profile = (await getDoc(doc(db, "users", user.uid))).data() || {};
+    verified = profile.verificationStatus === "verified";
+    load();
+  });
+</script>
+</body>
+</html>

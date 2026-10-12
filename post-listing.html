@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Post Item — CampusMart</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/brand.css" />
+<meta name="theme-color" content="#14213d" />
+<style>
+  .thumb{position:relative;width:96px;height:96px;border-radius:10px;overflow:hidden;border:1px solid #dee2e6}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb button{position:absolute;top:2px;right:2px;border:0;border-radius:50%;width:22px;height:22px;background:#000a;color:#fff;line-height:1}
+</style>
+</head>
+<body>
+<header class="cm-topbar">
+  <a href="/index.html" class="cm-topbar__brand"><div class="cm-topbar__brand-icon">🛒</div><div>Campus<span>Mart</span></div></a>
+</header>
+
+<main class="container pb-4" style="padding-top:100px;max-width:720px">
+  <h1 class="h4 mb-3" id="page-title">Post an item</h1>
+
+  <div id="blocked" class="alert alert-warning d-none">
+    Only verified students can post items. <a href="/pending.html">Check your verification status</a>.
+  </div>
+
+  <div id="form-wrap" class="d-none">
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Listing type</label>
+      <select id="type" class="form-select">
+        <option value="sell">Sell for a price</option>
+        <option value="giveaway">Free giveaway</option>
+        <option value="barter">Barter (exchange)</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Title</label>
+      <input id="title" class="form-control" maxlength="80" placeholder="e.g. Data Structures by Cormen, 3rd edition" />
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6">
+        <label class="form-label fw-semibold">Category</label>
+        <select id="category" class="form-select"></select>
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label fw-semibold">Condition</label>
+        <select id="condition" class="form-select"></select>
+      </div>
+    </div>
+
+    <div class="mb-3" id="price-box">
+      <label class="form-label fw-semibold">Price (Rs)</label>
+      <input id="price" type="number" min="1" class="form-control" placeholder="e.g. 1500" />
+    </div>
+    <div class="mb-3 d-none" id="barter-box">
+      <label class="form-label fw-semibold">What do you want in exchange?</label>
+      <input id="barterWanted" class="form-control" maxlength="100" placeholder="e.g. Calculus book or a scientific calculator" />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Description</label>
+      <textarea id="description" rows="4" class="form-control" maxlength="1000" placeholder="Edition, how much it was used, any damage..."></textarea>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6">
+        <label class="form-label fw-semibold">Department</label>
+        <input id="department" class="form-control" placeholder="e.g. Computer Science" />
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label fw-semibold">Semester</label>
+        <select id="semester" class="form-select"></select>
+      </div>
+    </div>
+
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="checkbox" id="bundle">
+      <label class="form-check-label" for="bundle">This is a bundle (several items sold together, e.g. all Semester 1 books)</label>
+    </div>
+    <div class="mb-3 d-none" id="bundle-box">
+      <label class="form-label fw-semibold">Items in the bundle (one per line, at least 2)</label>
+      <textarea id="bundle-items" rows="4" class="form-control" placeholder="Calculus by Thomas&#10;Physics by Halliday&#10;English notes"></textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Meetup point</label>
+      <select id="meetup" class="form-select"></select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Photos (1 to 3)</label>
+      <input id="photo-input" type="file" accept="image/*" multiple class="form-control" />
+      <div id="thumbs" class="d-flex flex-wrap gap-2 mt-2"></div>
+    </div>
+
+    <div id="error" class="text-danger small mb-2"></div>
+    <button id="save-btn" class="cm-btn cm-btn--accent w-100">Post item</button>
+  </div>
+</main>
+
+<script type="module">
+  import { auth, db } from "/js/firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import "/js/app.js";
+  import { showToast } from "/js/app.js";
+  import { CATEGORIES, CONDITIONS, MEETUP_POINTS, MAX_PHOTOS, compressImage, createListing, getListing, updateListing } from "/js/listings.js";
+
+  const $ = id => document.getElementById(id);
+  const editId = new URLSearchParams(location.search).get("edit");
+  let photos = [];          // array of Base64 data-URLs (existing + new)
+  let currentUser, profile;
+  const bundleLines = () => $("bundle-items").value.split("\n").map(x => x.trim()).filter(Boolean).slice(0, 15);
+
+  // Fill dropdowns
+  const fill = (el, items) => el.innerHTML = items.map(i => `<option value="${i}">${i}</option>`).join("");
+  fill($("category"), CATEGORIES);
+  fill($("condition"), CONDITIONS);
+  fill($("meetup"), MEETUP_POINTS);
+  $("semester").innerHTML = [1,2,3,4,5,6,7,8].map(n => `<option value="${n}">Semester ${n}</option>`).join("");
+
+  // Show/hide price & barter fields by listing type
+  function syncType() {
+    const t = $("type").value;
+    $("price-box").classList.toggle("d-none", t !== "sell");
+    $("barter-box").classList.toggle("d-none", t !== "barter");
+  }
+  $("type").addEventListener("change", syncType);
+  const syncBundle = () => $("bundle-box").classList.toggle("d-none", !$("bundle").checked);
+  $("bundle").addEventListener("change", syncBundle);
+
+  function renderThumbs() {
+    $("thumbs").innerHTML = photos.map((p, i) =>
+      `<div class="thumb"><img src="${p}" alt="Photo ${i + 1}"><button type="button" data-i="${i}" aria-label="Remove photo">&times;</button></div>`).join("");
+    $("thumbs").querySelectorAll("button").forEach(b => b.onclick = () => { photos.splice(+b.dataset.i, 1); renderThumbs(); });
+  }
+
+  $("photo-input").addEventListener("change", async e => {
+    const files = [...e.target.files];
+    e.target.value = "";
+    for (const f of files) {
+      if (photos.length >= MAX_PHOTOS) { showToast(`Maximum ${MAX_PHOTOS} photos allowed`, "error"); break; }
+      try { photos.push(await compressImage(f)); } catch { showToast("Could not read one image", "error"); }
+    }
+    renderThumbs();
+  });
+
+  onAuthStateChanged(auth, async user => {
+    if (!user) return location.replace("/login.html");
+    currentUser = user;
+    const snap = await getDoc(doc(db, "users", user.uid));
+    profile = snap.exists() ? snap.data() : {};
+    if (profile.verificationStatus !== "verified") { $("blocked").classList.remove("d-none"); return; }
+
+    $("form-wrap").classList.remove("d-none");
+    $("department").value = profile.department || "";
+    if (profile.semester) $("semester").value = String(profile.semester);
+
+    if (editId) {
+      const l = await getListing(editId);
+      if (!l || l.sellerId !== user.uid) return location.replace("/index.html");
+      if (l.status === "sold") { showToast("Sold listings cannot be edited", "error"); return location.replace("/listing.html?id=" + editId); }
+      $("page-title").textContent = "Edit item";
+      $("save-btn").textContent = "Save changes";
+      $("type").value = l.isGiveaway ? "giveaway" : l.isBarter ? "barter" : "sell";
+      $("title").value = l.title; $("category").value = l.category; $("condition").value = l.condition;
+      $("price").value = l.price || ""; $("barterWanted").value = l.barterWanted || "";
+      $("description").value = l.description; $("department").value = l.department || "";
+      $("semester").value = String(l.semester || 1); $("meetup").value = l.meetupPoint || MEETUP_POINTS[0];
+      photos = [...(l.photos || [])]; renderThumbs();
+      $("bundle").checked = !!l.isBundle; $("bundle-items").value = (l.bundleItems || []).join("\n"); syncBundle();
+    }
+    syncType();
+  });
+
+  $("save-btn").addEventListener("click", async () => {
+    const type = $("type").value;
+    const title = $("title").value.trim();
+    const description = $("description").value.trim();
+    const price = Number($("price").value);
+    const barterWanted = $("barterWanted").value.trim();
+    let err = "";
+    if (title.length < 3) err = "Enter a title (at least 3 characters).";
+    else if (description.length < 10) err = "Description must be at least 10 characters.";
+    else if (type === "sell" && !(price > 0)) err = "Enter a price greater than 0.";
+    else if (type === "barter" && !barterWanted) err = "Tell buyers what you want in exchange.";
+    else if ($("bundle").checked && bundleLines().length < 2) err = "A bundle needs at least 2 items (one per line).";
+    else if (photos.length < 1) err = "Add at least one photo.";
+    $("error").textContent = err;
+    if (err) return;
+
+    const data = {
+      title, description, category: $("category").value, condition: $("condition").value,
+      price: type === "sell" ? price : 0,
+      isGiveaway: type === "giveaway", isBarter: type === "barter",
+      barterWanted: type === "barter" ? barterWanted : "",
+      department: $("department").value.trim(), semester: Number($("semester").value),
+      meetupPoint: $("meetup").value, photos,
+      isBundle: $("bundle").checked, bundleItems: $("bundle").checked ? bundleLines() : []
+    };
+
+    const btn = $("save-btn");
+    btn.disabled = true; btn.textContent = "Saving...";
+    try {
+      let id = editId;
+      if (editId) await updateListing(editId, data);
+      else id = (await createListing(data, currentUser, profile)).id;
+      showToast(editId ? "Changes saved" : "Item posted!", "success");
+      setTimeout(() => location.replace("/listing.html?id=" + id), 600);
+    } catch (e) {
+      console.error(e);
+      $("error").textContent = e.code === "permission-denied"
+        ? "Permission denied by Firestore rules. Check that your account is verified and firestore.rules allows listing writes."
+        : "Could not save. Check your connection and try again.";
+      btn.disabled = false; btn.textContent = editId ? "Save changes" : "Post item";
+    }
+  });
+</script>
+</body>
+</html>

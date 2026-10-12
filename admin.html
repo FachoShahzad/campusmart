@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — CampusMart</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/brand.css" />
+<meta name="theme-color" content="#14213d" />
+<style>
+  .row-item{background:#fff;border:1px solid #e5e9ef;border-radius:12px;padding:12px;margin-bottom:10px}
+  .thumb{width:84px;height:84px;object-fit:cover;border-radius:8px;cursor:zoom-in;background:#f1f3f5}
+  .stat{background:#fff;border:1px solid #e5e9ef;border-radius:12px;padding:12px;height:100%}
+  .stat .n{font-size:1.6rem;font-weight:700;color:#14213d;line-height:1.1}
+  .stat .l{font-size:.8rem;color:#6b7280}
+  .stat.alert-n .n{color:#d96a0d}
+  .bar-wrap{background:#eef1f5;border-radius:6px;height:14px;min-width:0;overflow:hidden}
+  .bar-fill{background:#ff7f1e;height:100%;border-radius:6px}
+  #lb{display:none;position:fixed;inset:0;background:#000c;z-index:4000;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+  #lb img{max-width:100%;max-height:100%;border-radius:8px}
+</style>
+</head>
+<body>
+<header class="cm-topbar">
+  <a href="/index.html" class="cm-topbar__brand"><div class="cm-topbar__brand-icon">🛒</div><div>Campus<span>Mart</span> <small class="opacity-75">Admin</small></div></a>
+</header>
+<main class="container pb-5" style="padding-top:100px;max-width:960px">
+  <div id="denied" class="alert alert-danger d-none">Access denied. This page is only for admins. <a href="/index.html">Go home</a></div>
+  <div id="panel" class="d-none">
+    <ul class="nav nav-pills mb-3 flex-wrap gap-1" id="tabs">
+      <li><button class="nav-link active" data-tab="stats">📊 Dashboard</button></li>
+      <li><button class="nav-link" data-tab="verify">Verifications <span class="badge bg-danger" id="c-verify">0</span></button></li>
+      <li><button class="nav-link" data-tab="reports">Reports <span class="badge bg-danger" id="c-reports">0</span></button></li>
+      <li><button class="nav-link" data-tab="listings">Listings</button></li>
+      <li><button class="nav-link" data-tab="users">Users</button></li>
+    </ul>
+    <input id="user-q" class="form-control mb-3 d-none" placeholder="Search users by name or email..." />
+    <div id="content"><div class="text-muted text-center py-5">Loading...</div></div>
+  </div>
+</main>
+<div id="lb"><img alt="Student ID" /></div>
+
+<script type="module">
+  import { auth, db } from "/js/firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { doc, getDoc, getDocs, updateDoc, deleteDoc, collection, query, where, orderBy, limit, serverTimestamp, getCountFromServer, Timestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import "/js/app.js";
+  import { showToast } from "/js/app.js";
+  import { esc, priceLabel, CATEGORIES } from "/js/listings.js";
+  import { notify } from "/js/notifications.js";
+
+  const $ = id => document.getElementById(id);
+  let me, tab = "stats", D = { verify: [], reports: [], listings: [], users: [], stats: null };
+  const BLOCK = { isBlocked: true, verificationStatus: "blocked" };
+  const UNBLOCK = { isBlocked: false, verificationStatus: "verified" };
+
+  const ago = ts => { const m = Math.floor((Date.now() - (ts?.toMillis?.() || Date.now())) / 60000);
+    return m < 1 ? "just now" : m < 60 ? m + " min ago" : m < 1440 ? Math.floor(m / 60) + " h ago" : Math.floor(m / 1440) + " d ago"; };
+  // Student ID photo (Module 16): stored privately at users/{uid}/private/studentId  (field "image"), readable only by the owner + admin.
+  // Older accounts may still keep it on the user document, so fall back to the Base64 field there.
+  const idImage = u => { if (u._idImage) return u._idImage; const e = Object.entries(u).filter(([, v]) => typeof v === "string" && v.startsWith("data:image"));
+    return (e.find(([k]) => /student|id|card/i.test(k)) || e.find(([k]) => !/avatar|photo|profile/i.test(k)) || [])[1] || ""; };
+  const extras = u => Object.entries(u).filter(([k, v]) => /student.?id|roll|reg/i.test(k) && typeof v === "string" && !v.startsWith("data:"))
+    .map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(" · ");
+  const safe = async (fn, fallback) => { try { return await fn(); } catch (e) { console.error("[ADMIN]", e); return fallback; } };
+
+  /** Dashboard numbers (FR-032). Count queries read almost nothing (listings hold heavy Base64 photos, so we never download them). */
+  async function loadStats() {
+    const cnt = (c, ...cs) => safe(async () => (await getCountFromServer(query(collection(db, c), ...cs))).data().count, null);
+    const wk = Timestamp.fromMillis(Date.now() - 7 * 864e5);
+    const [users, verified, pending, rejected, blocked, newUsers, listings, available, reserved, sold, newListings, openReports, ratings, openRequests, ...cat] = await Promise.all([
+      cnt("users"), cnt("users", where("verificationStatus", "==", "verified")), cnt("users", where("verificationStatus", "==", "pending")),
+      cnt("users", where("verificationStatus", "==", "rejected")), cnt("users", where("verificationStatus", "==", "blocked")),
+      cnt("users", where("createdAt", ">=", wk)),
+      cnt("listings"), cnt("listings", where("status", "==", "available")), cnt("listings", where("status", "==", "reserved")), cnt("listings", where("status", "==", "sold")),
+      cnt("listings", where("createdAt", ">=", wk)),
+      cnt("reports", where("status", "==", "open")), cnt("ratings"), cnt("requestBoard", where("status", "==", "open")),
+      ...CATEGORIES.map(c => cnt("listings", where("category", "==", c)))
+    ]);
+    D.stats = { users, verified, pending, rejected, blocked, newUsers, listings, available, reserved, sold, newListings, openReports, ratings, openRequests,
+      categories: CATEGORIES.map((c, i) => ({ name: c, n: cat[i] })).sort((a, b) => (b.n || 0) - (a.n || 0)) };
+  }
+
+  function statsHtml() {
+    const S = D.stats; if (!S) return `<div class="text-muted text-center py-5">Loading...</div>`;
+    const v = x => x === null || x === undefined ? "-" : x;
+    const tile = (n, l, alertN) => `<div class="col-6 col-md-4 col-lg-3"><div class="stat ${alertN && n > 0 ? "alert-n" : ""}"><div class="n">${v(n)}</div><div class="l">${l}</div></div></div>`;
+    const group = (title, tiles) => `<h2 class="h6 text-uppercase text-muted mt-4 mb-2">${title}</h2><div class="row g-2">${tiles.join("")}</div>`;
+    const max = Math.max(1, ...S.categories.map(c => c.n || 0));
+    const bars = S.categories.map(c => `<div class="d-flex align-items-center gap-2 mb-2"><div class="small" style="width:112px;flex:none">${esc(c.name)}</div>
+        <div class="bar-wrap flex-grow-1"><div class="bar-fill" style="width:${Math.round(((c.n || 0) / max) * 100)}%"></div></div>
+        <div class="small fw-semibold text-end" style="width:34px;flex:none">${v(c.n)}</div></div>`).join("");
+    return group("Users", [tile(S.users, "Total users"), tile(S.verified, "Verified"), tile(S.pending, "Pending verification", true), tile(S.rejected, "Rejected"), tile(S.blocked, "Blocked"), tile(S.newUsers, "New in last 7 days")]) +
+      group("Listings and deals", [tile(S.listings, "Total listings"), tile(S.available, "Available"), tile(S.reserved, "Reserved"), tile(S.sold, "Completed deals (sold)"), tile(S.newListings, "New in last 7 days")]) +
+      group("Activity and moderation", [tile(S.openReports, "Open reports", true), tile(S.ratings, "Ratings given"), tile(S.openRequests, "Open requests")]) +
+      `<h2 class="h6 text-uppercase text-muted mt-4 mb-2">Most popular categories <span class="text-lowercase fw-normal">(by number of listings)</span></h2><div class="stat">${bars}</div>`;
+  }
+
+  async function loadAll() {
+    const snapDocs = s => s.docs.map(d => ({ id: d.id, ...d.data() }));
+    [D.verify, D.reports, D.listings, D.users] = await Promise.all([
+      safe(async () => snapDocs(await getDocs(query(collection(db, "users"), where("verificationStatus", "==", "pending"), limit(50)))), []),
+      safe(async () => snapDocs(await getDocs(query(collection(db, "reports"), where("status", "==", "open"), limit(50)))), []),
+      safe(async () => snapDocs(await getDocs(query(collection(db, "listings"), orderBy("createdAt", "desc"), limit(50)))), []),
+      safe(async () => snapDocs(await getDocs(query(collection(db, "users"), limit(200)))), [])
+    ]);
+    loadStats().then(render);   // dashboard numbers load in parallel; the tab fills in when ready
+    // Fetch each pending student's private ID photo (admin-only subdocument)
+    await Promise.all(D.verify.map(async u => {
+      try {
+        const s = await getDoc(doc(db, "users", u.id, "private", "studentId"));
+        if (s.exists()) u._idImage = s.data().image || "";
+      } catch (e) {
+        u._idErr = e.code || "error";                 // shown on the card so the problem is visible
+        console.warn("[ADMIN] cannot read private ID of", u.id, e.code || e);
+      }
+    }));
+    render();
+  }
+
+  function render() {
+    $("c-verify").textContent = D.verify.length; $("c-reports").textContent = D.reports.length;
+    document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+    $("user-q").classList.toggle("d-none", tab !== "users");
+    const empty = t => `<div class="text-center text-muted py-5">${t}</div>`;
+    let html = "";
+    if (tab === "stats") html = statsHtml();
+    if (tab === "verify") html = D.verify.map(u => `<div class="row-item d-flex gap-3 flex-wrap">
+        ${idImage(u) ? `<img class="thumb" data-act="img" src="${idImage(u)}" alt="Student ID">` : `<div class="thumb d-flex align-items-center justify-content-center small text-center ${u._idErr ? "text-danger" : "text-muted"}" title="${esc(u._idErr || "")}">${u._idErr ? "ID blocked<br>(" + esc(u._idErr) + ")" : "No ID<br>uploaded"}</div>`}
+        <div class="flex-grow-1"><div class="fw-semibold">${esc(u.name || "Student")}</div>
+          <div class="small text-muted">${esc(u.email || "")}</div>
+          <div class="small">${esc(u.department || "-")} · Semester ${esc(u.semester || "-")}</div>
+          <div class="small text-muted">${extras(u)}</div></div>
+        <div class="d-flex gap-2 align-items-start"><button class="btn btn-success btn-sm" data-act="approve" data-id="${esc(u.id)}">Approve</button>
+          <button class="btn btn-outline-danger btn-sm" data-act="reject" data-id="${esc(u.id)}">Reject</button></div></div>`).join("") || empty("No pending verifications.");
+    if (tab === "reports") html = D.reports.map(r => `<div class="row-item">
+        <div class="d-flex justify-content-between"><strong>${r.type === "listing" ? "Listing" : "User"}: ${esc(r.targetName)}</strong><span class="badge bg-warning text-dark">${esc(r.reason)}</span></div>
+        ${r.details ? `<p class="small mb-1 mt-1">${esc(r.details)}</p>` : ""}
+        <div class="small text-muted mb-2">Reported by ${esc(r.reporterName)} · ${ago(r.createdAt)}
+          ${r.listingId ? ` · <a href="/listing.html?id=${encodeURIComponent(r.listingId)}" target="_blank">View listing</a>` : ""}</div>
+        <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-outline-secondary" data-act="dismiss" data-id="${esc(r.id)}">Dismiss</button>
+          ${r.type === "listing"
+            ? `<button class="btn btn-sm btn-danger" data-act="rm-report-listing" data-id="${esc(r.id)}">Remove listing</button>
+               <button class="btn btn-sm btn-outline-danger" data-act="block-seller" data-id="${esc(r.id)}">Block seller</button>`
+            : `<button class="btn btn-sm btn-danger" data-act="block-user" data-id="${esc(r.id)}">Block user</button>`}</div></div>`).join("") || empty("No open reports.");
+    if (tab === "listings") html = D.listings.map(l => `<div class="row-item d-flex gap-3 align-items-center">
+        <img class="thumb" style="cursor:default" src="${l.photos?.[0] || ""}" alt="">
+        <div class="flex-grow-1"><a href="/listing.html?id=${encodeURIComponent(l.id)}" target="_blank" class="fw-semibold text-decoration-none">${esc(l.title)}</a>
+          <div class="small text-muted">${esc(l.sellerName || "")} · ${esc(l.category)} · ${priceLabel(l)} · ${esc(l.status)}</div></div>
+        <button class="btn btn-sm btn-outline-danger" data-act="del-listing" data-id="${esc(l.id)}">Delete</button></div>`).join("") || empty("No listings.");
+    if (tab === "users") {
+      const q = $("user-q").value.trim().toLowerCase();
+      html = D.users.filter(u => !q || `${u.name} ${u.email}`.toLowerCase().includes(q)).map(u => {
+        const blocked = u.verificationStatus === "blocked" || u.isBlocked;
+        return `<div class="row-item d-flex justify-content-between align-items-center gap-2">
+          <div><div class="fw-semibold">${esc(u.name || "Student")} ${u.role === "admin" ? '<span class="badge bg-primary">admin</span>' : ""}</div>
+            <div class="small text-muted">${esc(u.email || "")} · ${esc(u.verificationStatus || "-")}</div></div>
+          ${u.id === me.uid || u.role === "admin" ? "" : blocked
+            ? `<button class="btn btn-sm btn-outline-success" data-act="unblock" data-id="${esc(u.id)}">Unblock</button>`
+            : `<button class="btn btn-sm btn-outline-danger" data-act="block" data-id="${esc(u.id)}">Block</button>`}</div>`;
+      }).join("") || empty("No users found.");
+    }
+    $("content").innerHTML = html;
+  }
+
+  const setUser = (uid, patch) => updateDoc(doc(db, "users", uid), patch);
+  const closeReport = async (r, status, action) => {
+    await updateDoc(doc(db, "reports", r.id), { status, action, resolvedBy: me.uid, resolvedAt: serverTimestamp() });
+    notify(r.reporterId, { type: "report", title: "Your report was reviewed",
+      message: `Report on "${r.targetName}": ${status === "dismissed" ? "no action needed" : action}. Thank you for helping keep CampusMart safe.`, link: "/index.html" });
+  };
+
+  document.body.addEventListener("click", async e => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const act = b.dataset.act, id = b.dataset.id, r = D.reports.find(x => x.id === id);
+    try {
+      if (act === "img") { $("lb").querySelector("img").src = b.src; $("lb").style.display = "flex"; return; }
+      if (act === "approve" || act === "reject") {
+        const ok = act === "approve";
+        await setUser(id, { verificationStatus: ok ? "verified" : "rejected" });
+        notify(id, { type: "verification", title: ok ? "Account verified" : "Verification rejected",
+          message: ok ? "Your student ID was approved. You can now post items and chat." : "Your student ID could not be verified. Please contact support or register again with a clear photo.",
+          link: ok ? "/index.html" : "/pending.html" });
+      }
+      else if (act === "block") { if (!confirm("Block this user?")) return; await setUser(id, BLOCK); }
+      else if (act === "unblock") await setUser(id, UNBLOCK);
+      else if (act === "del-listing") { if (!confirm("Delete this listing permanently?")) return; await deleteDoc(doc(db, "listings", id)); }
+      else if (act === "dismiss") await closeReport(r, "dismissed", "dismissed");
+      else if (act === "rm-report-listing") { if (!confirm("Remove the reported listing?")) return; await deleteDoc(doc(db, "listings", r.targetId)); await closeReport(r, "resolved", "listing removed"); }
+      else if (act === "block-user") { if (!confirm("Block this user?")) return; await setUser(r.targetId, BLOCK); await closeReport(r, "resolved", "user blocked"); }
+      else if (act === "block-seller") {
+        const l = await getDoc(doc(db, "listings", r.targetId));
+        if (!l.exists()) return showToast("Listing no longer exists", "error");
+        if (!confirm("Block the seller of this listing?")) return;
+        await setUser(l.data().sellerId, BLOCK); await closeReport(r, "resolved", "seller blocked");
+      }
+      showToast("Done", "success"); await loadAll();
+    } catch (err) { console.error("[ADMIN]", err); showToast(err.code === "permission-denied" ? "Permission denied. Check firestore.rules" : "Action failed", "error"); }
+  });
+  $("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) { tab = b.dataset.tab; render(); } });
+  $("user-q").addEventListener("input", render);
+  $("lb").addEventListener("click", () => $("lb").style.display = "none");
+
+  onAuthStateChanged(auth, async user => {
+    if (!user) return location.replace("/login.html");
+    me = user;
+    const p = (await getDoc(doc(db, "users", user.uid))).data() || {};
+    if (p.role !== "admin") return $("denied").classList.remove("d-none");
+    $("panel").classList.remove("d-none");
+    loadAll();
+  });
+</script>
+</body>
+</html>

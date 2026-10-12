@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Seller Profile — CampusMart</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- CampusMart CSS -->
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/brand.css" />
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1a4078" />
+
+  <style>
+    .seller-header-card {
+      background: white;
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--color-border);
+      padding: var(--space-6);
+      text-align: center;
+      margin-top: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    .seller-avatar-wrap {
+      width: 90px;
+      height: 90px;
+      margin: 0 auto var(--space-3);
+    }
+    .seller-avatar-img {
+      width: 90px;
+      height: 90px;
+      border-radius: var(--radius-full);
+      object-fit: cover;
+      border: 3px solid var(--color-accent-400);
+    }
+    .seller-avatar-placeholder {
+      width: 90px;
+      height: 90px;
+      border-radius: var(--radius-full);
+      background: linear-gradient(135deg, var(--color-primary-600), var(--color-accent-500));
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="cm-topbar">
+    <button onclick="window.history.back()" class="cm-topbar__icon-btn" aria-label="Back">
+      <i class="bi bi-arrow-left"></i>
+    </button>
+    <div class="cm-topbar__brand ms-2">
+      <span>Seller Profile</span>
+    </div>
+    <div class="cm-topbar__actions">
+      <a href="/index.html" class="cm-topbar__icon-btn" aria-label="Home">
+        <i class="bi bi-house"></i>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="cm-page">
+    <div class="cm-container" style="max-width: 720px;">
+
+      <!-- Seller Header Card -->
+      <section class="seller-header-card">
+        <div class="seller-avatar-wrap">
+          <img id="seller-avatar" class="seller-avatar-img" style="display:none;" alt="Seller" />
+          <div id="seller-placeholder" class="seller-avatar-placeholder">CM</div>
+        </div>
+
+        <h1 class="h4 fw-bold mb-1" id="seller-name">Loading seller...</h1>
+        <p class="cm-fs-sm text-muted mb-2">
+          <i class="bi bi-mortarboard-fill text-primary"></i> University of Azad Jammu & Kashmir
+        </p>
+        <p class="cm-fs-sm fw-medium mb-3" id="seller-dept-sem">
+          <span id="seller-dept">-</span> • <span id="seller-sem">-</span>
+        </p>
+
+        <!-- Verification & Trust Score -->
+        <div class="d-flex align-items-center justify-content-center gap-2 mb-3 flex-wrap">
+          <div id="seller-verified-badge" class="cm-badge-pill cm-badge-pill--success" style="display:none;"></div>
+          <div class="cm-trust-score">
+            <i class="bi bi-shield-check"></i> Trust Score: <strong id="seller-trust">-</strong>/100
+          </div>
+        </div>
+        <p class="cm-fs-sm text-muted mb-3" id="seller-stats"></p>
+
+        <!-- Bio -->
+        <p class="cm-fs-sm text-secondary mb-3" id="seller-bio" style="display:none; max-width: 480px; margin: 0 auto;"></p>
+
+        <!-- Actions -->
+        <div class="d-flex justify-content-center gap-2 mt-3">
+          <a id="btn-seller-whatsapp" href="#" target="_blank" class="cm-btn cm-btn--sm cm-btn--accent" style="display:none;">
+            <i class="bi bi-whatsapp"></i> Chat on WhatsApp
+          </a>
+          <a id="btn-seller-chat" href="#" class="cm-btn cm-btn--sm cm-btn--primary" style="display:none;">
+            <i class="bi bi-chat-dots-fill"></i> In-App Chat
+          </a>
+        </div>
+      </section>
+
+      <!-- Active Listings of this Seller -->
+      <div class="cm-section-header">
+        <h2 class="cm-section-title">
+          <i class="bi bi-boxes"></i> Items by this Student (<span id="seller-listings-count">0</span>)
+        </h2>
+      </div>
+
+      <div class="row row-cols-1 row-cols-sm-2 g-3" id="seller-listings-grid"></div>
+
+      <div id="seller-empty-listings" class="cm-empty-state" style="display:none;">
+        <div class="cm-empty-state__icon">📦</div>
+        <h3 class="cm-empty-state__title">No active items</h3>
+        <p class="cm-empty-state__text">This student currently has no active listings available.</p>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="cm-bottom-nav">
+    <a href="/index.html" class="cm-bottom-nav__item">
+      <i class="bi bi-house-door-fill"></i>
+      <span>Home</span>
+    </a>
+    <a href="/index.html#cm-feed" class="cm-bottom-nav__item">
+      <i class="bi bi-search"></i>
+      <span>Search</span>
+    </a>
+    <a href="/post-listing.html" class="cm-bottom-nav__post">
+      <div class="cm-bottom-nav__post-btn"><i class="bi bi-plus-lg"></i></div>
+      <span>Sell</span>
+    </a>
+    <a href="/chat.html" class="cm-bottom-nav__item">
+      <i class="bi bi-chat-dots-fill"></i>
+      <span>Chat</span>
+    </a>
+    <a href="/profile.html" class="cm-bottom-nav__item">
+      <i class="bi bi-person-fill"></i>
+      <span>Profile</span>
+    </a>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module">
+    import { auth, db, COLLECTIONS } from "/js/firebase.js";
+    import { doc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import "/js/app.js";
+    import { getTrustStats } from "/js/ratings.js";
+    import { esc, priceLabel } from "/js/listings.js";
+    import "/js/chat-badge.js";
+
+    const $ = id => document.getElementById(id);
+    const params = new URLSearchParams(window.location.search);
+    const sellerUid = params.get("uid");
+    const fromListing = params.get("id");   // the listing the visitor came from (optional)
+
+    const initials = n => (n || "CM").split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() || "").join("");
+
+    if (!sellerUid) window.location.replace("/index.html");
+    else loadSeller(sellerUid);
+
+    async function loadSeller(uid) {
+      try {
+        const snap = await getDoc(doc(db, COLLECTIONS.USERS, uid));
+        if (!snap.exists()) {
+          alert("Student profile not found.");
+          window.location.replace("/index.html");
+          return;
+        }
+        const p = snap.data();
+
+        $("seller-name").textContent = p.name || "Student Seller";
+        $("seller-dept").textContent = p.department || "UAJK";
+        $("seller-sem").textContent = `Sem ${p.semester || 1}`;
+
+        // Verification badge reflects the real status
+        const vb = $("seller-verified-badge");
+        if (p.verificationStatus === "verified") {
+          vb.innerHTML = `<i class="bi bi-patch-check-fill"></i> Verified Student`; vb.style.display = "inline-flex";
+        } else if (p.verificationStatus === "blocked") {
+          vb.className = "cm-badge-pill cm-badge-pill--danger";
+          vb.innerHTML = `<i class="bi bi-slash-circle"></i> Blocked`; vb.style.display = "inline-flex";
+        }
+
+        // Avatar
+        if (p.avatar) {
+          $("seller-avatar").src = p.avatar;
+          $("seller-avatar").style.display = "block";
+          $("seller-placeholder").style.display = "none";
+        } else {
+          $("seller-placeholder").textContent = initials(p.name);
+        }
+
+        // WhatsApp
+        if (p.phone) {
+          $("btn-seller-whatsapp").href = `https://wa.me/${String(p.phone).replace(/[^0-9]/g, "")}`;
+          $("btn-seller-whatsapp").style.display = "inline-flex";
+        }
+
+        // Bio
+        if (p.bio) { $("seller-bio").textContent = p.bio; $("seller-bio").style.display = "block"; }
+
+        // Trust Score: computed live from real ratings + completed deals (Module 16, never stored)
+        getTrustStats(uid, p.verificationStatus === "verified").then(st => {
+          $("seller-trust").textContent = st.trust;
+          $("seller-stats").textContent = (st.count ? `⭐ ${st.avg.toFixed(1)} (${st.count} rating${st.count > 1 ? "s" : ""})` : "No ratings yet")
+            + ` · ${st.deals} completed deal${st.deals === 1 ? "" : "s"}`;
+        });
+
+        // Active listings of this seller (filtered in the browser: no index needed)
+        const ls = await getDocs(query(collection(db, COLLECTIONS.LISTINGS), where("sellerId", "==", uid)));
+        const items = ls.docs.map(d => ({ id: d.id, ...d.data() }))
+          .filter(l => l.status === "available")
+          .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+        $("seller-listings-count").textContent = items.length;
+
+        // In-app chat is per listing: use the listing the visitor came from, else the newest one
+        const me = auth.currentUser;
+        const chatListing = fromListing || items[0]?.id;
+        if (chatListing && (!me || me.uid !== uid)) {
+          $("btn-seller-chat").href = `/chat.html?listing=${encodeURIComponent(chatListing)}`;
+          $("btn-seller-chat").style.display = "inline-flex";
+        }
+
+        const grid = $("seller-listings-grid");
+        grid.innerHTML = "";
+        $("seller-empty-listings").style.display = items.length ? "none" : "flex";
+        items.forEach(item => {
+          const photo = item.photos && item.photos.length ? item.photos[0] : null;
+          const imgMarkup = photo
+            ? `<img src="${esc(photo)}" class="cm-listing-card__image" alt="${esc(item.title)}" />`
+            : `<div class="cm-listing-card__image-placeholder"><i class="bi bi-box"></i></div>`;
+          const card = document.createElement("div");
+          card.className = "col";
+          card.innerHTML = `
+            <a href="/listing.html?id=${encodeURIComponent(item.id)}" class="cm-listing-card h-100">
+              ${imgMarkup}
+              <div class="cm-listing-card__body">
+                <div class="cm-listing-card__price ${item.isGiveaway ? "cm-listing-card__price--free" : ""}">${esc(priceLabel(item))}</div>
+                <h4 class="cm-listing-card__title">${esc(item.title)}</h4>
+                <div class="cm-listing-card__meta">${esc(item.condition || "Good")} • Sem ${esc(item.semester || 1)}</div>
+              </div>
+            </a>`;
+          grid.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Error loading seller:", err);
+        $("seller-name").textContent = err.code === "permission-denied" ? "Please log in to view this profile" : "Could not load this profile";
+      }
+    }
+  </script>
+</body>
+</html>

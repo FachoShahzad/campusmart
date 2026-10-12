@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Messages — CampusMart</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/brand.css" />
+<meta name="theme-color" content="#14213d" />
+<style>
+  .cw{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 200px);min-height:420px;border:1px solid #e5e9ef;border-radius:12px;overflow:hidden;background:#fff}
+  @media(max-width:767px){.cw{grid-template-columns:1fr}.cw.open .cl{display:none}.cw:not(.open) .cc{display:none}}
+  .cl{border-right:1px solid #e5e9ef;overflow-y:auto}
+  .ti{padding:12px 14px;border-bottom:1px solid #f0f2f5;cursor:pointer}
+  .ti:hover,.ti.active{background:#f4f7fb}
+  .ub{background:#dc3545;color:#fff;border-radius:10px;padding:0 7px;font-size:.75rem}
+  .cc{display:flex;flex-direction:column;min-width:0}
+  .b{max-width:78%;padding:8px 12px;border-radius:14px;margin-bottom:6px;white-space:pre-wrap;word-break:break-word}
+  .b.me{margin-left:auto;background:#059669;color:#fff;border-bottom-right-radius:4px}
+  .b.th{background:#eef1f5;border-bottom-left-radius:4px}
+  .b small{display:block;opacity:.7;font-size:.7rem;margin-top:2px}
+</style>
+</head>
+<body>
+<header class="cm-topbar">
+  <a href="/index.html" class="cm-topbar__brand"><div class="cm-topbar__brand-icon">🛒</div><div>Campus<span>Mart</span></div></a>
+</header>
+<main class="container pb-4" style="padding-top:100px;max-width:1000px">
+  <div id="blocked" class="alert alert-warning d-none">Only verified students can start chats. <a href="/pending.html">Check your verification status</a>.</div>
+  <div id="cw" class="cw">
+    <aside class="cl">
+      <div class="p-3 fw-semibold border-bottom">Messages</div>
+      <div id="tlist"><div class="p-3 text-muted small">Loading...</div></div>
+    </aside>
+    <section class="cc">
+      <div id="empty" class="m-auto text-muted text-center p-4">Select a conversation<br><span class="small">or open a listing and tap "Chat with seller".</span></div>
+      <div id="pane" style="display:none;flex-direction:column;height:100%">
+        <div class="d-flex align-items-center gap-2 p-2 border-bottom">
+          <button id="back" class="btn btn-sm d-md-none" aria-label="Back"><i class="bi bi-arrow-left"></i></button>
+          <div class="min-w-0"><div id="h-name" class="fw-semibold"></div><a id="h-item" class="small" href="#"></a></div>
+          <button id="report-user" class="btn btn-sm btn-outline-secondary ms-auto" aria-label="Report user"><i class="bi bi-flag"></i> Report</button>
+        </div>
+        <div id="msgs" class="flex-grow-1 overflow-auto p-3"></div>
+        <div class="p-2 border-top d-flex gap-2">
+          <input id="msg-in" class="form-control" maxlength="1000" placeholder="Type a message..." autocomplete="off" />
+          <button id="send" class="cm-btn cm-btn--accent"><i class="bi bi-send-fill"></i></button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+  import { auth, db } from "/js/firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import "/js/app.js";
+  import { showToast } from "/js/app.js";
+  import { getListing, esc } from "/js/listings.js";
+  import { openReportDialog } from "/js/report-ui.js";
+  import { ensureThread, getThread, watchThreads, watchMessages, sendMessage, markRead } from "/js/chat.js";
+
+  const $ = id => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  let me, profile, verified = false, threads = [], cur = null, curData = null, stopMsgs = null;
+  const otherOf = t => me.uid === t.buyerId ? { id: t.sellerId, name: t.sellerName } : { id: t.buyerId, name: t.buyerName };
+
+  function renderList() {
+    $("tlist").innerHTML = threads.length ? threads.map(t => {
+      const n = t.unread?.[me.uid] || 0;
+      return `<div class="ti ${t.id === cur ? "active" : ""}" data-id="${esc(t.id)}">
+        <div class="d-flex justify-content-between"><strong>${esc(otherOf(t).name)}</strong>${n ? `<span class="ub">${n}</span>` : ""}</div>
+        <div class="small text-muted text-truncate">${esc(t.listingTitle)}</div>
+        <div class="small text-truncate">${esc(t.lastMessage || "No messages yet")}</div></div>`;
+    }).join("") : `<div class="p-3 text-muted small">No conversations yet.</div>`;
+  }
+
+  function renderMsgs(list) {
+    const box = $("msgs");
+    box.innerHTML = list.length ? list.map(m => {
+      const t = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+      return `<div class="b ${m.senderId === me.uid ? "me" : "th"}">${esc(m.text)}<small>${t}</small></div>`;
+    }).join("") : `<div class="text-center text-muted small mt-4">Say hello 👋</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  async function openConv(id) {
+    const t = await getThread(id).catch(() => null);
+    if (!t) return showToast("Conversation not found", "error");
+    cur = id; curData = t;
+    $("cw").classList.add("open");
+    $("empty").style.display = "none"; $("pane").style.display = "flex";
+    $("h-name").textContent = otherOf(t).name;
+    $("h-item").textContent = t.listingTitle; $("h-item").href = t.listingId.startsWith("req_") ? "/requests.html" : "/listing.html?id=" + encodeURIComponent(t.listingId);
+    stopMsgs?.(); stopMsgs = watchMessages(id, renderMsgs);
+    markRead(id, me.uid);
+    history.replaceState(null, "", "?thread=" + encodeURIComponent(id));
+    renderList();
+  }
+
+  $("tlist").addEventListener("click", e => { const el = e.target.closest(".ti"); if (el) openConv(el.dataset.id); });
+  $("back").addEventListener("click", () => { stopMsgs?.(); cur = null; $("cw").classList.remove("open"); $("pane").style.display = "none"; $("empty").style.display = ""; renderList(); });
+
+  async function send() {
+    const input = $("msg-in"), text = input.value.trim();
+    if (!text || !cur) return;
+    if (!verified) return showToast("Only verified students can send messages", "error");
+    input.value = "";
+    try { await sendMessage(cur, me, otherOf(curData).id, text); }
+    catch (err) { console.error(err); input.value = text; showToast("Message not sent", "error"); }
+  }
+  $("report-user").addEventListener("click", () => {
+    if (!curData) return;
+    const o = otherOf(curData);
+    openReportDialog({ type: "user", targetId: o.id, targetName: o.name, listingId: curData.listingId });
+  });
+  $("send").addEventListener("click", send);
+  $("msg-in").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); send(); } });
+
+  onAuthStateChanged(auth, async user => {
+    if (!user) return location.replace("/login.html");
+    me = user;
+    profile = (await getDoc(doc(db, "users", user.uid))).data() || {};
+    verified = profile.verificationStatus === "verified";
+    if (!verified) $("blocked").classList.remove("d-none");
+
+    watchThreads(user.uid, list => {
+      threads = list; renderList();
+      const t = cur && list.find(x => x.id === cur);
+      if (t && (t.unread?.[me.uid] || 0) > 0) markRead(cur, me.uid);   // new message arrived while open
+    }, () => { $("tlist").innerHTML = `<div class="p-3 text-danger small">Could not load chats. Check firestore.rules.</div>`; });
+
+    const lid = params.get("listing"), tid = params.get("thread");
+    if (lid) {
+      if (!verified) return;
+      const l = await getListing(lid);
+      if (!l) return showToast("Listing not found", "error");
+      if (l.sellerId === user.uid) return showToast("This is your own listing", "info");
+      try { openConv(await ensureThread(l, user, profile)); }
+      catch (err) { console.error(err); showToast("Could not start chat. Check firestore.rules.", "error"); }
+    } else if (tid) openConv(tid);
+  });
+</script>
+</body>
+</html>
